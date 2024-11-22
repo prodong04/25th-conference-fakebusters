@@ -1,0 +1,130 @@
+.uploadForm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    height: 100%; 
+  }
+  
+  .uploadIconContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 16px; 
+  }
+
+.uploadIcon {
+    width: 32px; 
+    height: 32px;
+    margin-bottom: 16px;
+    color: #888;
+  }
+  
+  /* Responsive styles */
+  @media (min-width: 768px) {
+    .uploadIcon {
+      width: 150px; /* Larger size for desktop */
+      height: 150px;
+    }
+  }
+
+.dropArea {
+    border: 2px solid #ccc;
+    border-radius: 20px;
+    width: 800px;
+    height: 300px; 
+    transition: height 0.3s ease; 
+    font-family: sans-serif;
+    margin: 100px auto;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.3s ease, filter 0.3s ease;
+    background-color: #ffffff;
+  }
+
+  .dropArea:hover {
+  filter: brightness(0.97); /* Darken the container on hover */
+  }
+  
+  .dragging {
+    border-color: purple;
+  }
+  
+  .uploadForm {
+    margin-bottom: 10px;
+  }
+  
+  .button {
+    font-family: var(--font-roboto-condensed), sans-serif;
+    font-weight: 500;
+    letter-spacing: 1px;
+    display: inline-block;
+    padding: 10px;
+    background: #0d6efd;
+    cursor: pointer;
+    border-radius: 5px;
+    border: 1px solid #0d6efd;
+    color: white;
+  }
+  
+  .button:hover {
+    background: #0b5ed7;
+    border: 1px solid #0a58ca;
+    color: white;
+  }
+  
+  .fileInput {
+    display: none;
+  }
+
+  .previewShown {
+    height: 300px;
+  }  
+
+  .previewContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  
+  .preview {
+    max-width: 75%;
+    max-height: 75%;
+    object-fit: contain;
+  }
+  
+  .buttonContainer {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  .clearButton, .uploadButton {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0 5px;
+  }
+  
+  .clearButton {
+    background-color: #ccc;
+    color: #333;
+  }
+  
+  .uploadButton {
+    background-color: #007bff;
+    color: white;
+  }
