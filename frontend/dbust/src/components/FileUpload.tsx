@@ -64,6 +64,9 @@ const [isProcessing, setIsProcessing] = useState(false);
     const handleUpload = useCallback(async () => {
       if (selectedFile) {
         setIsProcessing(true);
+
+        const startTime = Date.now(); // Start time
+        console.log(`Upload started at: ${new Date(startTime).toISOString()}`);
         
         try {
           const formData = new FormData();
@@ -73,6 +76,10 @@ const [isProcessing, setIsProcessing] = useState(false);
             method: 'POST',
             body: formData,
           });
+
+          const endTime = Date.now(); // End time
+          const duration = endTime - startTime; // Duration in milliseconds
+          console.log(`Upload completed in ${duration} milliseconds`);
 
           if (!response.ok) {
             throw new Error('Upload failed');

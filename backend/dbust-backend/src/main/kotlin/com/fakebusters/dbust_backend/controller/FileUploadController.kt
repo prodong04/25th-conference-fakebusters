@@ -13,7 +13,16 @@ class FileUploadController(private val s3Service: S3Service) {
 
     @PostMapping("/upload")
     fun uploadFile(@RequestParam("file") file: MultipartFile): ResponseEntity<FileUploadResponse> = runBlocking {
+        val startTime = System.currentTimeMillis() // Start time
+        println("Upload started at: ${java.time.Instant.now()}")
+
         val fileKey = s3Service.uploadFile(file)
+
+        val endTime = System.currentTimeMillis() // End time
+        val duration = endTime - startTime // Duration in milliseconds
+        println("Upload completed in $duration milliseconds")
+
+
         return@runBlocking ResponseEntity.ok(FileUploadResponse(fileKey))
     }
 }
