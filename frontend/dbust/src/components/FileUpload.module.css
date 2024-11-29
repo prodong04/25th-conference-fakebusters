@@ -13,28 +13,31 @@
     justify-content: center;
     align-items: center;
     width: 100%;
+    max-width: 50%; 
     margin-bottom: 16px; 
-  }
+    padding: 10px;
+}
 
 .uploadIcon {
-    width: 32px; 
-    height: 32px;
-    margin-bottom: 16px;
-    color: #888;
-  }
-  
-  /* Responsive styles */
-  @media (min-width: 768px) {
-    .uploadIcon {
-      width: 150px; /* Larger size for desktop */
-      height: 150px;
-    }
-  }
+  width: auto;
+  height: auto;
+  max-width: 150px;
+  max-height: 150px;
+  margin: 0;
+}
+
+.label {
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  width: 100%;
+}
 
 .dropArea {
     border: 2px solid #ccc;
     border-radius: 20px;
-    width: 800px;
+    width: 100%;
+    max-width: 800px;
     height: 300px; 
     transition: height 0.3s ease; 
     font-family: sans-serif;
@@ -49,7 +52,7 @@
   }
 
   .dropArea:hover {
-  filter: brightness(0.97); /* Darken the container on hover */
+  filter: brightness(0.97);
   }
   
   .dragging {
@@ -71,6 +74,7 @@
     border-radius: 5px;
     border: 1px solid #0d6efd;
     color: white;
+    max-width: 50%;
   }
   
   .button:hover {

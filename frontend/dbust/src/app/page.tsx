@@ -8,13 +8,10 @@ import ProcessingOverlay from '../components/ProcessingOverlay';
 function simulateLongProcess(file: File): Promise<boolean> {
   return new Promise((resolve) => {
     console.log(`Processing file: ${file.name}, Size: ${file.size} bytes`);
-    
-    // Simulate a longer processing time (e.g., 5 seconds)
     const processingTime = 5000;
 
     setTimeout(() => {
       console.log(`Finished processing: ${file.name}`);
-      // Simulate a response based on file size
       const result = file.size < 1000000; // True if file is smaller than 1MB
       resolve(result);
     }, processingTime);
@@ -40,11 +37,12 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-5xl font-medium">Deepfake Detector</h1>
+    <main className="flex flex-col items-center justify-center p-6">
+      <h1 className="text-3xl font-bold mb-4">Deepfake Detector</h1>
       <FileUpload onFileUpload={handleFileUpload} />
       {result !== null && <Result isTrue={result} />}
       {isProcessing && <ProcessingOverlay />}
+      <p className="mt-4 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
     </main>
   );
 }
