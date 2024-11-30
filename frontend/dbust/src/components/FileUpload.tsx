@@ -113,8 +113,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
         >
             {preview ? (
                 <div className={styles.previewContainer}>
-                    {selectedFile && selectedFile.type.startsWith('video/') && (
+                    {selectedFile && selectedFile.type.startsWith('video/') ? (
                         <video autoPlay loop muted className={styles.preview} src={preview} />
+                    ) : (
+                        <img className={styles.preview} src={preview} alt="Preview" />
                     )}
                     <div className={styles.buttonContainer}>
                         <button onClick={handleClear} className={styles.clearButton}>Clear</button>
