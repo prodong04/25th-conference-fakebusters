@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Provider } from "@/components/ui/provider"
 import Header from '../components/Header'
 import "./globals.css";
 
@@ -26,11 +27,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={robotoCondensed.variable}>
-      <body>
-        <Header />
-        {children}
-      </body>
-    </html>
+      <html suppressHydrationWarning lang="en" className={robotoCondensed.variable}>
+        <body>
+          <Header />
+          <Provider>{children}</Provider>
+        </body>
+      </html>
   )
 }
