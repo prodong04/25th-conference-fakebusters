@@ -5,6 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-primary: 'Noto Sans', 'Apple Basic', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,5 +18,5 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-roboto-condensed), Arial, Helvetica, sans-serif;
+  font-family: var(--font-primary);
 }
