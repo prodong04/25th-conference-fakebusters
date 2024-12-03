@@ -4,7 +4,7 @@ interface ProcessingPageProps {
   originalVideoSrc: string;
   roiVideos: {
     leftEye: string;
-    rightEye: string;
+    nose: string;
     mouth: string;
   };
 }
@@ -12,10 +12,16 @@ interface ProcessingPageProps {
 const ProcessingPage: React.FC<ProcessingPageProps> = ({ originalVideoSrc }) => {
   // Hard-coded ROI video paths
   const roiVideos = {
-    leftEye: 'sample_data/002/002_left_eye_roi.mp4',
-    mouth: 'sample_data/002/002_mouth_roi.mp4',
-    nose: 'sample_data/002/002_nose_roi.mp4',
+    leftEye: '/002/002_left_eye_roi.mp4',
+    mouth: '/002/002_mouth_roi.mp4',
+    nose: '/002/002_nose_roi.mp4',
   };
+
+  // Log the paths to verify
+  console.log('Left Eye Video Path:', roiVideos.leftEye);
+  console.log('Mouth Video Path:', roiVideos.mouth);
+  console.log('Nose Video Path:', roiVideos.nose);
+
 
   const callouts = [
     {

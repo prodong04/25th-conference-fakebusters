@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import FileUpload from '../components/FileUpload';
+import ProcessingPage from './ProcessingPage';
 
 function simulateLongProcess(file: File): Promise<boolean> {
   return new Promise((resolve) => {
@@ -35,12 +36,20 @@ const MainPage: React.FC = () => {
     }
   };
 
+  const roiVideos = {
+    leftEye: '/002/002_left_eye_roi.mp4',
+    mouth: '/002/002_mouth_roi.mp4',
+    nose: '/002/002_nose_roi.mp4',
+  };
+
   return (
     <main className="flex flex-col items-center justify-center p-6">
       <h1 className="text-3xl font-bold mb-4">Deepfake Detector</h1>
       <FileUpload onFileUpload={handleFileUpload} />
       <p className="mt-4 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
-      {originalVideoSrc && (
+      {originalVideoSrc ? (
+        <ProcessingPage originalVideoSrc={originalVideoSrc} roiVideos={roiVideos} />
+      ) : (
         <div className="mt-6">
           <h2 className="text-2xl font-bold text-gray-900">Processing Results</h2>
           <div className="mb-6">
@@ -50,7 +59,7 @@ const MainPage: React.FC = () => {
               loop
               muted
               className="w-full max-w-2xl"
-              src={originalVideoSrc}
+              src={originalVideoSrc || undefined}
             />
           </div>
         </div>
