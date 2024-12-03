@@ -50,7 +50,7 @@ const ProcessingPage: React.FC<ProcessingPageProps> = ({ originalVideoSrc }) => 
   return (
     <div className="bg-gray-100">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl py-16 sm:py-24 lg:max-w-none lg:py-32">
+        <div className="mx-auto max-w-2xl py-8 sm:py-12 lg:max-w-none lg:py-4">
           <h1 className="text-3xl font-bold mb-4">Processing Results</h1>
 
           {/* Large Preview for Original Video */}
