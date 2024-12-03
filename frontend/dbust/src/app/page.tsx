@@ -44,7 +44,7 @@ const MainPage: React.FC = () => {
 
   return (
     <main className="flex flex-col items-center justify-center p-6">
-      <h1 className="text-3xl font-bold mb-4">Deepfake Detector</h1>
+      <h1 className="text-3xl font-bold mt-24 mb-4">Deepfake Detector</h1>
       <FileUpload onFileUpload={handleFileUpload} />
       <p className="mt-2 mb-12 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
       {originalVideoSrc && result !== null ? (
