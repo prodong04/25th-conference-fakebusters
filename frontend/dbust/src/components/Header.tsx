@@ -18,7 +18,7 @@ const Header = () => {
       </div>
       <nav className={styles.nav}>
         <Link href="/" className={styles.navLink}>Home</Link>
-        <Link href="https://github.com/sunghj1118/25th-conference-fakebusters" className={styles.navLink}>Github</Link>
+        <Link href="https://github.com/YBIGTA/25th-conference-fakebusters" className={styles.navLink}>Github</Link>
         <Link href="/docs" className={styles.navLink}>Documentation</Link>
       </nav>
     </header>
