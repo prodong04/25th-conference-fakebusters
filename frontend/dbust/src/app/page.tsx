@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FileUpload from '../components/FileUpload';
 import ProcessingPage from './ProcessingPage';
 
 function simulateLongProcess(file: File): Promise<boolean> {
   return new Promise((resolve) => {
     console.log(`Processing file: ${file.name}, Size: ${file.size} bytes`);
-    const processingTime = 5000;
+    const processingTime = 0;
 
     setTimeout(() => {
       console.log(`Finished processing: ${file.name}`);
@@ -35,6 +35,12 @@ const MainPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
+  useEffect(() => {
+    if (originalVideoSrc && result !== null) {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+  }, [originalVideoSrc, result]);
 
   const roiVideos = {
     leftEye: '/002/002_left_eye_roi.mp4',
