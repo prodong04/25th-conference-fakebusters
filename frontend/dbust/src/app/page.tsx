@@ -47,23 +47,9 @@ const MainPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-4">Deepfake Detector</h1>
       <FileUpload onFileUpload={handleFileUpload} />
       <p className="mt-4 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
-      {originalVideoSrc ? (
+      {originalVideoSrc && result !== null ? (
         <ProcessingPage originalVideoSrc={originalVideoSrc} roiVideos={roiVideos} />
-      ) : (
-        <div className="mt-6">
-          <h2 className="text-2xl font-bold text-gray-900">Processing Results</h2>
-          <div className="mb-6">
-            <video
-              controls
-              autoPlay
-              loop
-              muted
-              className="w-full max-w-2xl"
-              src={originalVideoSrc || undefined}
-            />
-          </div>
-        </div>
-      )}
+      ) : null}
     </main>
   );
 };
