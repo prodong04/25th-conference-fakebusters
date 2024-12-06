@@ -43,7 +43,7 @@ mkdir -p data/video/ data/roi/ data/audio/
 
 # Step 6: Fix dependency issue
 echo "Fixing dependency issue..."
-utils_dir=~/miniconda3/envs/video/lib/python3.9/site-packages/skvideo/io/
+utils_dir=~/miniconda3/envs/video/lib/python3.11/site-packages/skvideo/io/
 mkdir -p $utils_dir
 mv utils/abstract.py $utils_dir || true
 mv utils/ffmpeg.py $utils_dir || true
