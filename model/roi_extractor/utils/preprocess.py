@@ -442,50 +442,6 @@ class VideoROIExtractor:
 
         ## 처리할 프레임과 랜드마크가 없으면 None 반환.
         return None
-    
-        # 전체 프레임 배열이 이미 메모리에 있다고 가정
-        frames = self.frames  # 이미 메모리에 존재하는 프레임 배열
-        margin = min(self.frame_total_count, self.window_margin)
-        
-        # Precompute invariant data.
-        mean_face_stable = self.mean_face[self.stablePntsIDs, :]
-        sequence = []
-        
-        # Initialize rolling buffers.
-        q_landmarks = np.zeros((margin, landmarks.shape[1], landmarks.shape[2]))
-        
-        pbar = tqdm(total=len(landmarks) - margin, desc="관심영역 추출", leave=False)
-        for frame_idx in range(len(landmarks)):
-            frame = frames[frame_idx]  # 이미 메모리에 존재하는 프레임 배열에서 직접 접근
-
-            # Rolling buffer for landmarks.
-            q_landmarks[frame_idx % margin] = landmarks[frame_idx]
-
-            if frame_idx < margin - 1:
-                continue
-
-            # Smooth landmarks and compute transformations.
-            smoothed_landmarks = np.mean(q_landmarks, axis=0)
-            cur_frame = frames[frame_idx - margin + 1]  # 이전 프레임에서 하나 꺼내기
-
-            trans_frame, trans = self.warp_img(
-                smoothed_landmarks[self.stablePntsIDs, :],
-                mean_face_stable,
-                cur_frame
-            )
-            trans_landmarks = trans(q_landmarks[(frame_idx - margin + 1) % margin])
-            
-            patch = self.cut_patch(
-                trans_frame,
-                trans_landmarks[self.roi_indices],
-                self.crop_height // 2,
-                self.crop_width // 2
-            )
-            sequence.append(patch)
-            pbar.update(1)
-
-        pbar.close()
-        return np.array(sequence)
 
     def crop_patch2(self, landmarks: np.ndarray) -> np.ndarray:
         # 전체 프레임 배열이 이미 메모리에 있다고 가정
