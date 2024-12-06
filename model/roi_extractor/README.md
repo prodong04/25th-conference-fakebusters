@@ -1,4 +1,4 @@
-# Video ROI Extractor & FACTOR Inference
+# Video ROI Extractor
 
 <p align="center">
   <img alt="original" src="assets/original.gif" width="100%">
@@ -23,7 +23,10 @@
 ## Installation
 
 ```bash
-  ## Set-up takes about 10~20 minutes depending on your environment.
+  ## Move to the following directory.
+  cd WORKING_DIRECTORY/model/roi_extractor
+
+  ## Set-up takes about 10~20 minutes depending on your system.
   chmod +x setup.sh
   ./setup.sh
 ```
@@ -72,22 +75,26 @@
   ## Video Landmark Options
   skip_frames: 10              ## Only detect landmarks from every n frames. (faster speed)
   resized_frame_height: 100    ## Resize before detection to enhance speed.
-  resized_frame_width: 200     ## Even for high quality videos, dlib can detect pretty well in small resolutions.
+  resized_frame_width: 200     ## Even for high quality videos,
+                               ## dlib can detect pretty well in small resolutions.
 
   ## Video Crop Options
-  stablePntsIDs: [33, 36, 39, 42, 45] ## DO NOT CHANGE: Reference landmark indices.
-  std_size: [256, 256]         ## Output resolution of cut_patch.
-  crop_height: 96              ## Output ROI frame height.
-  crop_width: 96               ## Output ROI frame width.
-  window_margin: 12            ## Window margin for rolling buffer.
+  stablePntsIDs: [33, 36, 39, 42, 45]  ## DO NOT CHANGE: Reference landmark indices.
+  std_size: [256, 256]                 ## Output resolution of cut_patch.
+  crop_height: 96                      ## Output ROI frame height.
+  crop_width: 96                       ## Output ROI frame width.
+  window_margin: 12                    ## Window margin for rolling buffer.
 ```
 
 ## Deployment
 
 ```bash
+  ## Make sure you activate the conda environment!
+  conda activate video
+
+  ## If conda argument is not recognized in the terminal, try the following:
+  source ~/miniconda3/etc/profile.d/conda.sh
+
   ## If you want to extract ROI and audio from files in data/video...
   python utils/preprocess.py -c config.yaml
-
-  ## If you want to calculate truth scores from ROI and audio...
-  python av_hubert/avhubert/inference.py --dummy "dummy"
 ```
