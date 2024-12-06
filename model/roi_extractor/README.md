@@ -23,8 +23,11 @@
 ## Installation
 
 ```bash
+  ## clone the repository.
+  git clone https://github.com/YBIGTA/25th-conference-fakebusters.git
+
   ## Move to the following directory.
-  cd WORKING_DIRECTORY/model/roi_extractor
+  cd 25th-conference-fakebusters/model/roi_extractor
 
   ## Set-up takes about 10~20 minutes depending on your system.
   chmod +x setup.sh
