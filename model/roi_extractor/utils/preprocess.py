@@ -11,39 +11,130 @@ from tqdm import tqdm
 from collections import deque
 from skimage import transform as tf
 
-class VideoFeatureExtractor:
+class VideoROIExtractor:
     
-    def __init__(self, input_video_path, detector, predictor, mean_face, config):
+    def __init__(self,
+                 input_video_path: str,
+                 detector: dlib.get_frontal_face_detector,
+                 predictor: dlib.shape_predictor,
+                 mean_face: object,
+                 config: dict):
+        """
+        If you intend to import this class for extracting ROIs,
+        you only need to provide a dictionary of config settings for the following:
+        roi_target, skip_frames, resized_frame_width, resized_frame_height,
+        stablePntsIDs, std_size, crop_width, crop_height, and window_margin.
+        """
+        ## Arguments
         self.input_video_path = input_video_path
         self.detector = detector
         self.predictor = predictor
         self.mean_face = mean_face
         self.config = config
 
+        ## Directory Management
+        self.roi_directory = config['roi_directory']
+        self.audio_directory = config['audio_directory']
+
+        ## ROI Settings
+        self.roi_target = config['roi_target']
+        self.custom_target = config['custom_target']
+        self.roi_indices = None
+        self.get_roi_indices()
+
+        ## Video Landmark Options
         self.skip_frames = config['skip_frames']
         self.resized_frame_width = config['resized_frame_width']
         self.resized_frame_height = config['resized_frame_height']
 
-        self.std_size = config['std_size']
-        self.crop_width = config['crop_width']
-        self.crop_height = config['crop_height']
+        ## Video Crop Options
         self.stablePntsIDs = config['stablePntsIDs']
+        self.std_size = config['std_size']
+        self.crop_height = config['crop_height']
+        self.crop_width = config['crop_width']
         self.window_margin = config['window_margin']
         
-        self.roi_directory = config['roi_directory']
-        self.audio_directory = config['audio_directory']
-
+        ## Video Metadata
         self.frame_total_count = 0
         self.frame_per_second = 0
         self.current_frames = 1
-        self.get_frame_info()
+        self.get_metadata()
 
-        self.custom_target = config['custom_target']
-        self.roi_target = config['roi_target']
-        self.roi_indices = None
-        self.get_roi_indices()
+        ## Video Data
+        self.frames = None
+        self.load_video()
 
+    ## =====================================================================
+    ## ============================= UTILITIES =============================
+    ## =====================================================================
+
+    def load_video(self):
+        """
+        비디오 파일 읽어 프레임 이미지 배열로 반환.
+        """
+        videogen = skvideo.io.vread(self.input_video_path)
+        frames = np.array([frame for frame in videogen])
+        self.frames = frames
+
+    def yield_frame(self):
+        """
+        주어진 프레임 이미지 배열로부터 이미지 한장씩 반환.
+        """
+        for frame in self.frames:
+            yield frame
+
+    def get_metadata(self):
+        """
+        비디오 파일을 읽어 총 프레임 수와 fps 정보를 저장.
+        """
+        ## 비디오 메타데이터 열람.
+        meta_data = skvideo.io.ffprobe(self.input_video_path)
+        fps = meta_data['video']['@avg_frame_rate']
+        ftc = meta_data['video']['@nb_frames']
+        ## 문자열 정보 정수로 변환.
+        self.frame_per_second = int(fps.split('/')[0])
+        self.frame_total_count = int(ftc)
+
+    def get_roi_indices(self):
+        """
+        사용자 설정에서 읽어온 roi 타겟을 랜드마크 인덱스 리스트로 변환.
+        """
+        roi_dict = {
+            "mouth": [48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67],
+            "nose": [27,28,29,30,31,32,33,34,35],
+            "right eye": [36,37,38,39,40,41],
+            "right cheek": [0,1,2,3,4,5,48,31,39,40,41,36],
+            "right eyebrow": [17,18,19,20,21],
+            "left eye": [42,43,44,45,46,47],
+            "left cheek": [16,15,14,13,12,11,35,42,47,46,45],
+            "left eyebrow": [22,23,24,25,26]
+        }
+        if self.custom_target:
+            self.roi_indices = self.custom_target
+        else:
+            self.roi_indices = roi_dict[self.roi_target]
+
+    def save(self, rois):
+        """
+        추출한 ROI는 mp4 파일로, 오디오는 wav 파일로 저장.
+        """
+        ## 경로 할당.
+        video_name = os.path.basename(self.input_video_path[:-4])
+        roi_name = "custom" if self.custom_target else self.roi_target
+        roi_path = os.path.join(self.roi_directory, video_name +'_' + roi_name + '_roi.mp4')
+        audio_fn = os.path.join(self.audio_directory, video_name + '.wav')
+
+        # 비디오 저장.
+        skvideo.io.vwrite(roi_path, rois, inputdict={'-r': str(self.frame_per_second)})
+        
+        # 오디오 추출.
+        cmd = f"/root/miniconda3/envs/video/bin/ffmpeg -i {self.input_video_path} -f wav -vn -y {audio_fn} -loglevel quiet"
+        subprocess.call(cmd, shell=True)
+
+    ## ======================================================================
     ## ============================== LANDMARK ==============================
+    ## ======================================================================
+
     def detect_landmark(self, frame: np.ndarray) -> np.ndarray:
         """
         이미지로부터 얼굴 랜드마크 추출.
@@ -147,10 +238,12 @@ class VideoFeatureExtractor:
         ## 최종 결측치 체크.
         valid_frames_idx = [idx for idx, _ in enumerate(landmarks) if _ is not None]
         assert len(valid_frames_idx) == len(landmarks), "not every frame has landmark"
-        return landmarks
+        return np.array(landmarks)
 
+    ## ======================================================================
+    ## ==============================   CROP   ==============================
+    ## ======================================================================
 
-    ## ==============================   FACE   ==============================
     def warp_img(self, src: np.ndarray,
                  dst: np.ndarray,
                  img: np.ndarray
@@ -202,49 +295,6 @@ class VideoFeatureExtractor:
         warped = warped.astype('uint8')
         return warped
 
-    def get_frame_info(self):
-        """
-        비디오 파일을 읽어 총 프레임 수와 fps 정보를 저장.
-        """
-        cap = cv2.VideoCapture(self.input_video_path)
-        self.frame_per_second = int(cap.get(cv2.CAP_PROP_FPS))
-        self.frame_total_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        cap.release()
-
-    def get_roi_indices(self):
-        """
-        사용자 설정에서 읽어온 roi 타겟을 랜드마크 인덱스 리스트로 변환.
-        """
-        roi_dict = {
-            "mouth": [48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67],
-            "nose": [27,28,29,30,31,32,33,34,35],
-            "right eye": [36,37,38,39,40,41],
-            "right cheek": [0,1,2,3,4,5,48,31,39,40,41,36],
-            "right eyebrow": [17,18,19,20,21],
-            "left eye": [42,43,44,45,46,47],
-            "left cheek": [16,15,14,13,12,11,35,42,47,46,45],
-            "left eyebrow": [22,23,24,25,26]
-        }
-        if self.custom_target:
-            self.roi_indices = self.custom_target
-        else:
-            self.roi_indices = roi_dict[self.roi_target]
-
-    def read_video(self):
-        """
-        비디오 파일을 프레임 단위로 읽어서 반환.
-        """
-        cap = cv2.VideoCapture(self.input_video_path)
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if ret:
-                yield frame
-            else:
-                break
-        cap.release()
-
-
-    ## ==============================   CROP   ==============================  
     def cut_patch(self, img: np.ndarray,
                   landmarks: np.ndarray,
                   height: int,
@@ -296,7 +346,7 @@ class VideoFeatureExtractor:
         )
         return cut_img
 
-    def crop_patch(self, landmarks: list[np.ndarray]) -> np.ndarray:
+    def crop_patch1(self, landmarks: list[np.ndarray]) -> np.ndarray:
         """
         주어진 비디오 프레임에서 랜드마크를 기준으로 ROI를 추출하여 패치 시퀀스를 반환.
         패치는 프레임 간의 일관성을 유지하기 위해 랜드마크를 스무딩 처리하고,
@@ -312,7 +362,7 @@ class VideoFeatureExtractor:
             Exception: 랜드마크를 처리할 수 없는 경우 예외 처리.
         """
         ## 비디오 불러오고, 프레임 인덱스 초기화.
-        frame_gen = self.read_video()
+        frame_gen = self.yield_frame()
         frame_idx = 0
 
         ## 비디오 총 프레임 수와 윈도우 크기와 비교, 더 작은 값을 롤링 버퍼의 최대 용량으로 지정한다.
@@ -393,9 +443,84 @@ class VideoFeatureExtractor:
         ## 처리할 프레임과 랜드마크가 없으면 None 반환.
         return None
     
+        # 전체 프레임 배열이 이미 메모리에 있다고 가정
+        frames = self.frames  # 이미 메모리에 존재하는 프레임 배열
+        margin = min(self.frame_total_count, self.window_margin)
+        
+        # Precompute invariant data.
+        mean_face_stable = self.mean_face[self.stablePntsIDs, :]
+        sequence = []
+        
+        # Initialize rolling buffers.
+        q_landmarks = np.zeros((margin, landmarks.shape[1], landmarks.shape[2]))
+        
+        pbar = tqdm(total=len(landmarks) - margin, desc="관심영역 추출", leave=False)
+        for frame_idx in range(len(landmarks)):
+            frame = frames[frame_idx]  # 이미 메모리에 존재하는 프레임 배열에서 직접 접근
 
-    ## ==============================  PROCESS  ==============================
-    def preprocess_video(self):
+            # Rolling buffer for landmarks.
+            q_landmarks[frame_idx % margin] = landmarks[frame_idx]
+
+            if frame_idx < margin - 1:
+                continue
+
+            # Smooth landmarks and compute transformations.
+            smoothed_landmarks = np.mean(q_landmarks, axis=0)
+            cur_frame = frames[frame_idx - margin + 1]  # 이전 프레임에서 하나 꺼내기
+
+            trans_frame, trans = self.warp_img(
+                smoothed_landmarks[self.stablePntsIDs, :],
+                mean_face_stable,
+                cur_frame
+            )
+            trans_landmarks = trans(q_landmarks[(frame_idx - margin + 1) % margin])
+            
+            patch = self.cut_patch(
+                trans_frame,
+                trans_landmarks[self.roi_indices],
+                self.crop_height // 2,
+                self.crop_width // 2
+            )
+            sequence.append(patch)
+            pbar.update(1)
+
+        pbar.close()
+        return np.array(sequence)
+
+    def crop_patch2(self, landmarks: np.ndarray) -> np.ndarray:
+        # 전체 프레임 배열이 이미 메모리에 있다고 가정
+        frames = self.frames  # 이미 메모리에 존재하는 프레임 배열
+        margin = min(self.frame_total_count, self.window_margin)
+        
+        # 시퀀스를 저장할 리스트 초기화
+        sequence = []
+
+        pbar = tqdm(total=len(landmarks), desc="관심영역 추출", leave=False)
+        
+        for frame_idx in range(len(landmarks)):
+            frame = frames[frame_idx]  # 이미 메모리에 존재하는 프레임 배열에서 직접 접근
+            cur_landmarks = landmarks[frame_idx][self.roi_indices]  # 현재 랜드마크 사용
+
+            # 랜드마크에 맞춰서 ROI 자르기
+            patch = self.cut_patch(
+                frame,
+                cur_landmarks,
+                self.crop_height // 2,
+                self.crop_width // 2
+            )
+
+            # 자른 패치를 시퀀스에 추가
+            sequence.append(patch)
+            pbar.update(1)
+
+        pbar.close()
+        return np.array(sequence)
+
+    ## ======================================================================
+    ## ==============================  PROCESS  =============================
+    ## ======================================================================
+
+    def preprocess_video(self) -> np.ndarray:
         """
         비디오 파일에서 얼굴을 감지하고, 해당 얼굴의 랜드마크를 기준으로 얼굴 영역을 자르고, 
         얼굴을 정렬하여 비디오를 전처리하는 함수.
@@ -403,15 +528,11 @@ class VideoFeatureExtractor:
         주어진 입력 비디오 파일에서 얼굴을 감지하고, 랜드마크를 추출하여 얼굴 영역을 자른 후 
         표준 크기로 얼굴을 정렬하여 새로운 비디오를 생성. 이때 음성도 추출하여 저장.
         """
-        ## 비디오 읽고 프레임 단위 분할
-        videogen = skvideo.io.vread(self.input_video_path)
-        frames = np.array([frame for frame in videogen])
-
         ## 랜드마크 추출
         landmarks = []
         ## 프로세스 트래킹을 위한 프로그레스 바 설정.
-        with tqdm(total=len(frames), desc="랜드마크 추출", leave=False) as pbar:
-            for frame in frames:
+        with tqdm(total=len(self.frames), desc="랜드마크 추출", leave=False) as pbar:
+            for frame in self.frames:
                 if self.current_frames % self.skip_frames != 0:
                     self.current_frames+=1
                     landmarks.append(None)
@@ -425,25 +546,13 @@ class VideoFeatureExtractor:
         preprocessed_landmarks = self.landmarks_interpolate(landmarks)
 
         ## ROI 패치 자르기
-        rois = self.crop_patch(landmarks=preprocessed_landmarks)
-
-        # 결과 저장
-        video_name = os.path.basename(self.input_video_path[:-4])
-        roi_name = "custom" if self.custom_target else self.roi_target
-        roi_path = os.path.join(self.roi_directory, video_name +'_' + roi_name + '_roi.mp4')
-        audio_fn = os.path.join(self.audio_directory, video_name + '.wav')
-
-        # 비디오 저장
-        rois = [cv2.cvtColor(roi, cv2.COLOR_BGR2RGB) for roi in rois]
-        skvideo.io.vwrite(roi_path, rois, inputdict={'-r': str(self.frame_per_second)})
+        rois = self.crop_patch2(landmarks=preprocessed_landmarks)
+        return rois
         
-        # 오디오 추출
-        cmd = f"/root/miniconda3/envs/video/bin/ffmpeg -i {self.input_video_path} -f wav -vn -y {audio_fn} -loglevel quiet"
-        subprocess.call(cmd, shell=True)
-        return
-    
+    ## ======================================================================
+    ## ==============================   MAIN   ==============================
+    ## ======================================================================
 
-## ==============================   MAIN   ==============================
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -466,5 +575,6 @@ if __name__ == "__main__":
         video_path = os.path.join(video_directory, video)
 
         if video_path.endswith('.mp4') and not video_path.endswith('_roi.mp4'):
-            processor = VideoFeatureExtractor(video_path, detector, predictor, mean_face, config)
-            processor.preprocess_video()
+            processor = VideoROIExtractor(video_path, detector, predictor, mean_face, config)
+            rois = processor.preprocess_video()
+            processor.save(rois)
