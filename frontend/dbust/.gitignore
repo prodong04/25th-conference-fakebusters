@@ -41,3 +41,6 @@ next-env.d.ts
 
 # ignore the node_modules in the dbust folder
 frontend/dbust/node_modules
+
+# ignore the public folder in the dbust folder
+public/002
