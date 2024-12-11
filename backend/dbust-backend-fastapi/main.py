@@ -75,9 +75,7 @@ async def upload_file(file: UploadFile = File(...)):
     # Log metrics to CSV
     file_name = file.filename
     file_type = file.content_type
-    contents = await file.read()
-    file_size = len(contents)
-    file.file.seek(0)
+    file_size = file.size
     upload_time = int((end_time - start_time) * 1000)
 
     log_upload_metrics(file_name, file_type, file_size, upload_time)
