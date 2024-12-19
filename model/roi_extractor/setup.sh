@@ -29,6 +29,7 @@ conda install -c conda-forge ffmpeg -y
 apt update
 apt install cmake -y
 pip install -r requirements.txt || true
+python -m pip install mediapipe
 
 # Step 4: Download additional resources
 echo "Downloading additional resources..."
