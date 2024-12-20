@@ -23,3 +23,4 @@ async def root():
     return {"message": "Hello World"}
 
 
+# run with uvicorn main:app --reload
