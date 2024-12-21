@@ -301,7 +301,7 @@ class ROIProcessor:
         ## 랜드마크 검출 모델 불러오기.
         with FaceLandmarker.create_from_options(options) as landmarker:
             cap = cv2.VideoCapture(self.video_path)
-            fps = cap.get(cv2.CAP_PROP_FPS)
+            fps = int(cap.get(cv2.CAP_PROP_FPS))
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frame_idx = 0
 
@@ -326,7 +326,8 @@ class ROIProcessor:
             ## 리소스 릴리즈.
             cap.release()
             cv2.destroyAllWindows()
-        return transformed_frames
+            transformed_frames = np.array(transformed_frames)
+        return transformed_frames, fps
 
 
     def detect_with_draw(self, output_path: str) -> None:
@@ -431,8 +432,7 @@ class ROIProcessor:
         ## 랜드마크 검출 모델 불러오기.
         with FaceLandmarker.create_from_options(options) as landmarker:
             cap = cv2.VideoCapture(self.video_path)
-
-            fps = cap.get(cv2.CAP_PROP_FPS)
+            fps = int(cap.get(cv2.CAP_PROP_FPS))
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frame_idx = 0
 
