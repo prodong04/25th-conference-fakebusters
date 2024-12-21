@@ -174,3 +174,6 @@ sample_data/002
 
 # video
 **/video/
+
+# Ignore data files
+frontend/dbust/public/data
