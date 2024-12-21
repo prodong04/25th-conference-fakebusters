@@ -70,28 +70,28 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
 
             try {
                 // File Upload
-                const formData = new FormData();
-                formData.append('file', selectedFile);
+                // const formData = new FormData();
+                // formData.append('file', selectedFile);
 
-                const response = await fetch('http://localhost:8000/api/files/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
+                // const response = await fetch('http://localhost:8000/api/files/upload', {
+                //     method: 'POST',
+                //     body: formData,
+                // });
 
-                const endTime = Date.now();
-                const duration = endTime - startTime;
-                console.log(`Upload completed in ${duration} milliseconds`);
+                // const endTime = Date.now();
+                // const duration = endTime - startTime;
+                // console.log(`Upload completed in ${duration} milliseconds`);
 
-                if (!response.ok) {
-                    throw new Error('Upload failed');
-                }
+                // if (!response.ok) {
+                //     throw new Error('Upload failed');
+                // }
 
-                const data = await response.json();
-                console.log('File uploaded successfully:', data);
+                // const data = await response.json();
+                // console.log('File uploaded successfully:', data);
 
                 // Simulate upload
-                // await new Promise((resolve) => setTimeout(resolve, 3000));
-                // console.log('Simulated upload completed in 3000 milliseconds');
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                console.log('Simulated upload completed in 1000 milliseconds');
                 
                 onFileUpload(selectedFile);
 
