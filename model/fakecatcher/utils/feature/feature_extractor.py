@@ -3,7 +3,7 @@ from typing import Tuple, Dict, List
 from scipy.signal import csd
 from scipy.stats import entropy
 from scipy.fft import fft, fftfreq
-from .signal_transformation import *
+from signal_transformation import *
 
 class FeatureExtractor:
     """
@@ -51,8 +51,8 @@ class FeatureExtractor:
         f1 = self.F1(log_D_C) # (2, )
         f3 = self.F3(S_union_D_C)
         f4 = self.F4(S_union_D_C, self.fps)
-        mean_S = np.mean(S_sac, axis=1)
-        max_S = np.max(S_sac, axis=1)
+        mean_S = np.mean(S_sac, axis=1).real
+        max_S = np.max(S_sac, axis=1).real
         f1_flat = f1.flatten()
         f3_flat = f3.flatten()
         f4_flat = f4.flatten()
@@ -140,7 +140,6 @@ class FeatureExtractor:
         successive_difference =  np.diff(reshaped_signals[:,:,0], axis=1)
         # 제곱의 평균의 루트 계산
         rmssd = np.sqrt(np.mean(successive_difference**2,axis=1))
-
         # 4. sdnni
         window_std = reshaped_signals.std(axis=2)
         sdnni = np.mean(window_std, axis=1)
@@ -160,20 +159,80 @@ class FeatureExtractor:
         return features    
 
 import json
-if __name__=="__main__":
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.svm import SVR
+
+def split_segments(data, segment_length):
+    """
+    Split data into segments of fixed length.
+    """
+    valid_length = len(data) - (len(data) % segment_length)
+    return [np.array(data[i:i + segment_length]) for i in range(0, valid_length, segment_length)]
+
+def combine_segments(*segments):
+    """
+    Combine multiple segments based on indices.
+    """
+    return list(zip(*segments))
+
+def majority_voting(probabilities):
+    """
+    Perform majority voting on the predicted probabilities.
+    """
+    mean_prob = np.mean(probabilities)
+    majority_vote = np.round(mean_prob)
+    return majority_vote
+
+if __name__ == "__main__":
     file_path = "ppg_data.json"
 
     with open(file_path, 'r') as json_file:
         data = json.load(json_file)
 
     # Convert lists in JSON to numpy arrays
-    ppg_data = [
-        np.array(data["L_ROI_G_PPG"]),
-        np.array(data["M_ROI_G_PPG"]),
-        np.array(data["R_ROI_G_PPG"]),
-        np.array(data["L_ROI_C_PPG"]),
-        np.array(data["M_ROI_C_PPG"]),
-        np.array(data["R_ROI_C_PPG"])
-    ]
-    fe = FeatureExtractor(60, *ppg_data)
-    print(fe.feature_union())
+    R_ROI_G_PPG = data["L_ROI_G_PPG"]
+    R_ROI_C_PPG = data["M_ROI_G_PPG"]
+    L_ROI_G_PPG = data["R_ROI_G_PPG"]
+    L_ROI_C_PPG = data["L_ROI_C_PPG"]
+    M_ROI_G_PPG = data["M_ROI_C_PPG"]
+    M_ROI_C_PPG = data["R_ROI_C_PPG"]
+
+    R_ROI_G_segments = split_segments(R_ROI_G_PPG, 72)
+    R_ROI_C_segments = split_segments(R_ROI_C_PPG, 72)
+    L_ROI_G_segments = split_segments(L_ROI_G_PPG, 72)
+    L_ROI_C_segments = split_segments(L_ROI_C_PPG, 72)
+    M_ROI_G_segments = split_segments(M_ROI_G_PPG, 72)
+    M_ROI_C_segments = split_segments(M_ROI_C_PPG, 72)
+
+    combined_segments = combine_segments(
+        R_ROI_G_segments, 
+        R_ROI_C_segments, 
+        L_ROI_G_segments, 
+        L_ROI_C_segments, 
+        M_ROI_G_segments, 
+        M_ROI_C_segments
+    )
+
+    features = []
+    for ppg in combined_segments:
+        fe = FeatureExtractor(24, *ppg)
+        feature = fe.feature_union()
+        features.append(feature)
+    features = np.array(features)
+    labels = np.ones(features.shape[0], dtype=int)
+
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=42)
+
+    svr = SVR()
+    svr.fit(X_train, y_train)
+
+    segment_probabilities = svr.predict(X_test)
+    video_labels = [majority_voting(segment_probabilities)]
+
+    print("Segment Probabilities:", segment_probabilities)
+    print("Video Labels:", video_labels)
+    print("real label: ", labels)
