@@ -44,8 +44,13 @@ const MainPage: React.FC = () => {
   };
 
   const loadAugmentedImages = (): string[] => {
-    const context = require.context('/public/data/chim/frames', false, /\.(png|jpe?g|svg)$/);
-    return context.keys().map(context) as string[];
+    const imageCount = 1200; // Total number of images
+    const images: string[] = [];
+    for (let i = 1; i <= imageCount; i++) {
+      const paddedNumber = String(i).padStart(4, '0');
+      images.push(`/data/chim/frames/frame${paddedNumber}.jpg`);
+    }
+    return images;
   };
 
 
@@ -56,9 +61,9 @@ const MainPage: React.FC = () => {
   }, [originalVideoSrc, result]);
 
   const roiVideos = {
-    leftEye: '/002/002_left_eye_roi.mp4',
-    mouth: '/002/002_mouth_roi.mp4',
-    nose: '/002/002_nose_roi.mp4',
+    leftEye: '/data/002/002_left_eye_roi.mp4',
+    mouth: '/data/002/002_mouth_roi.mp4',
+    nose: '/data/002/002_nose_roi.mp4',
   };
 
   return (
