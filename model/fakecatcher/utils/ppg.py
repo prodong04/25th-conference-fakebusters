@@ -336,8 +336,19 @@ class PPG_C:
         ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
         """
         self.RGB_mean_dict = RGB_mean_dict
+        self.RGB = self.extract_mean_rgb()
         self.fps = fps
 
+    @classmethod
+    def from_RGB(cls, RGB: np.ndarray, fps: float):
+        """
+        생성자 오버로딩 느낌
+        """
+        obj = cls.__new__(cls)
+        obj.RGB_mean_dict = None
+        obj.RGB = RGB
+        obj.fps = fps
+        return obj
     ## ====================================================================
     ## ========================== Core Methods ============================
     ## ====================================================================
@@ -381,8 +392,7 @@ class PPG_C:
             BVP: PPG 신호.
         """
         # 1. RGB 평균값 추출
-        RGB = self.extract_mean_rgb()
-        num_frames = RGB.shape[0]
+        num_frames = self.RGB.shape[0]
 
         # 2. Band-pass filtering
         B, A = self.bandpass_filter(lpf, hpf)
@@ -398,8 +408,8 @@ class PPG_C:
         win_start, win_mid, win_end = 0, int(win_length // 2), win_length
 
         for _ in range(num_windows):
-            rgb_base = np.mean(RGB[win_start:win_end], axis=0)
-            rgb_norm = RGB[win_start:win_end] / rgb_base
+            rgb_base = np.mean(self.RGB[win_start:win_end], axis=0)
+            rgb_norm = self.RGB[win_start:win_end] / rgb_base
 
             Xs = 3 * rgb_norm[:, 0] - 2 * rgb_norm[:, 1]
             Ys = 1.5 * rgb_norm[:, 0] + rgb_norm[:, 1] - 1.5 * rgb_norm[:, 2]
@@ -431,7 +441,40 @@ class PPG_MAP:
         self.transformed_frames = transformed_frames
         self.fps = fps
 
-    def idk(self):
+    def compute_map(self):
         """
         """
-        self.transformed_frames
+        ## (1200, 600, 1320, 3)
+        num_frames = self.transformed_frames.shape[0]
+        region_height = int(self.transformed_frames.shape[1]/4)
+        region_width = int(self.transformed_frames.shape[2]/8)
+
+        ## (1200, 4, 150, 8, 165, 3)
+        regions_reshaped = self.transformed_frames.reshape(
+            self.transformed_frames.shape[0],
+            self.transformed_frames.shape[1] // region_height, region_height,
+            self.transformed_frames.shape[2] // region_width, region_width,
+            self.transformed_frames.shape[3]
+        )
+
+        ## (1200, 4, 8, 3)
+        region_means = regions_reshaped.mean(axis=(2, 4))
+        num_cols = region_means.shape[1]
+        num_rows = region_means.shape[2]
+        grid_rows = num_cols * num_rows * 2
+        grid = np.empty(shape=(grid_rows, num_frames))
+
+        iter = 0
+        for row in range(num_rows):
+            for col in range(num_cols):
+                PPG = PPG_C.from_RGB(RGB=region_means[:, col, row, :], fps=self.fps)
+                signal = PPG.compute_signal()
+                fft_values = np.fft.fft(signal)
+                psd_values = np.abs(fft_values)**2
+                normalized_signal = ((signal - signal.min()) / (signal.max() - signal.min()) * 255).astype(np.uint8)
+                normalized_density = ((psd_values - psd_values.min()) / (psd_values.max() - psd_values.min()) * 255).astype(np.uint8)
+                grid[iter,:] = normalized_signal
+                iter+=1
+                grid[iter,:] = normalized_density
+                iter+=1
+        return grid
