@@ -18,6 +18,7 @@ class PPG_G:
         ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
         """
         self.RGB_mean_dict = RGB_mean_dict
+
         self.fps = int(fps)
 
     ## ====================================================================
@@ -336,6 +337,7 @@ class PPG_C:
         ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
         """
         self.RGB_mean_dict = RGB_mean_dict
+
         self.RGB = self.extract_mean_rgb()
         self.fps = fps
 
@@ -392,6 +394,7 @@ class PPG_C:
             BVP: PPG 신호.
         """
         # 1. RGB 평균값 추출
+
         num_frames = self.RGB.shape[0]
 
         # 2. Band-pass filtering
@@ -401,11 +404,13 @@ class PPG_C:
         win_length = math.ceil(win_sec * self.fps)
         if win_length % 2:
             win_length += 1
+
         num_windows = math.ceil((num_frames - win_length) / (win_length // 2)) + 1
 
         # 4. PPG 신호 계산
         COMPUTED_PPG_SIGNAL = np.zeros((win_length // 2) * (num_windows + 1))
         win_start, win_mid, win_end = 0, int(win_length // 2), win_length
+
 
         while win_end <= num_frames:
             rgb_base = np.mean(self.RGB[win_start:win_end], axis=0)
@@ -440,6 +445,7 @@ class PPG_MAP:
         """
         self.transformed_frames = transformed_frames
         self.fps = fps
+
 
     def compute_map(self):
         """
