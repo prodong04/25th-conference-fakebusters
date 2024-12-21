@@ -400,14 +400,16 @@ class PPG_C:
         # 3. 슬라이딩 윈도우 설정
         win_length = math.ceil(win_sec * self.fps)
         if win_length % 2:
-            win_length += 1
-        num_windows = math.floor((num_frames - win_length // 2) / (win_length // 2))
+            win_length += 1  # 짝수로 맞춤
 
         # 4. PPG 신호 계산
-        COMPUTED_PPG_SIGNAL = np.zeros((win_length // 2) * (num_windows + 1))
-        win_start, win_mid, win_end = 0, int(win_length // 2), win_length
+        COMPUTED_PPG_SIGNAL = np.zeros(num_frames)  # 결과 배열을 num_frames 크기로 초기화
+        win_start = 0
 
-        for _ in range(num_windows):
+        while win_start + win_length <= num_frames:
+            win_end = win_start + win_length
+
+            # 현재 윈도우에 대한 평균 및 정규화
             rgb_base = np.mean(self.RGB[win_start:win_end], axis=0)
             rgb_norm = self.RGB[win_start:win_end] / rgb_base
 
@@ -422,11 +424,11 @@ class PPG_C:
             S_window = Xf - alpha * Yf
             S_window *= windows.hann(win_length)
 
-            COMPUTED_PPG_SIGNAL[win_start:win_mid] += S_window[:win_length // 2]
-            COMPUTED_PPG_SIGNAL[win_mid:win_end] = S_window[win_length // 2:]
-            win_start = win_mid
-            win_mid = win_start + win_length // 2
-            win_end = win_start + win_length
+            # 결과 반영
+            COMPUTED_PPG_SIGNAL[win_start:win_end] += S_window
+
+            # 다음 윈도우로 이동
+            win_start += win_length // 2  # 윈도우가 절반만큼 겹침
 
         return COMPUTED_PPG_SIGNAL
 
