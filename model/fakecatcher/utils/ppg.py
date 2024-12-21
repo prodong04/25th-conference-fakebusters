@@ -401,13 +401,13 @@ class PPG_C:
         win_length = math.ceil(win_sec * self.fps)
         if win_length % 2:
             win_length += 1
-        num_windows = math.floor((num_frames - win_length // 2) / (win_length // 2))
+        num_windows = math.ceil((num_frames - win_length) / (win_length // 2)) + 1
 
         # 4. PPG 신호 계산
         COMPUTED_PPG_SIGNAL = np.zeros((win_length // 2) * (num_windows + 1))
         win_start, win_mid, win_end = 0, int(win_length // 2), win_length
 
-        for _ in range(num_windows):
+        while win_end <= num_frames:
             rgb_base = np.mean(self.RGB[win_start:win_end], axis=0)
             rgb_norm = self.RGB[win_start:win_end] / rgb_base
 
