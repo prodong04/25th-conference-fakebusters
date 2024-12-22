@@ -89,15 +89,3 @@ class EfficientNetB3(nn.Module):
         x = self.blocks(x)
         x = self.head(x)
         return x
-
-
-if __name__ == "__main__":
-    model_0 = baseCNN()
-    model_1 = ResNet34()
-    model_2 = EfficientNetB3()
-    # 180x64 입력으로 테스트
-    sample_input = torch.randn(1, 1, 180, 64)
-    output_0 = model_0(sample_input)
-    output_1 = model_1(sample_input)
-    output_2 = model_2(sample_input)
-    print(output_0, output_1, output_2) 
