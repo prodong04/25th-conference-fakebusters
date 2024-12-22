@@ -1,4 +1,5 @@
 import cv2
+import yaml
 import skvideo.io
 import numpy as np
 import mediapipe as mp
@@ -120,10 +121,11 @@ class ROIProcessor:
         427 : [120,44 ], 449 : [114,12 ], 347 : [114,30 ], 425 : [114,40 ]}
 
 
-    def __init__(self, video_path: str, model_path: str):
-        self.video_path = video_path
-        self.model_path = model_path
-
+    def __init__(self, config: dict):
+        self.video_path = config["video_path"]
+        self.model_path = config["model_path"]
+        self.fps_standard = int(config["fps_standard"])
+        self.seg_time_interval = int(config["seg_time_interval"])
 
     def map(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> np.ndarray:
         """
@@ -301,12 +303,12 @@ class ROIProcessor:
         ## 랜드마크 검출 모델 불러오기.
         with FaceLandmarker.create_from_options(options) as landmarker:
             cap = cv2.VideoCapture(self.video_path)
-            fps = int(cap.get(cv2.CAP_PROP_FPS))
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps_local = int(cap.get(cv2.CAP_PROP_FPS))
+            total_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frame_idx = 0
 
             ## tqdm 진행도 설정.
-            with tqdm(total=total_frames, desc="Processing Frames", unit="frame") as pbar:
+            with tqdm(total=total_frame_count, desc="Processing Frames", unit="frame") as pbar:
 
                 ## 프레임 단위 루프 진행.
                 while cap.isOpened():
@@ -316,18 +318,28 @@ class ROIProcessor:
                     
                     ## 랜드마크 검출.
                     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-                    timestep_ms= int((frame_idx / fps) * 1000)
+                    timestep_ms= int((frame_idx / fps_local) * 1000)
                     detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
                     ## 프레임 이미지에 그림 그리기.
                     transformed_frames.append(self.map(frame, detection_result))
                     frame_idx += 1
                     pbar.update(1)
 
+            transformed_frames = np.array(transformed_frames)
+            segment_size = int(fps_local * self.seg_time_interval)
+            padding_size = (segment_size - (total_frame_count % segment_size)) % segment_size
+            segment_num = int((total_frame_count + padding_size) / segment_size)
+
+            if padding_size > 0:
+                transformed_frames = np.pad(transformed_frames, ((0, padding_size),(0, 0),(0, 0),(0, 0)), mode='constant', constant_values=0)
+
+            transformed_frames = transformed_frames.reshape(segment_num, segment_size, 600, 1320, 3)
+            transformed_frames = transformed_frames[:-1, :, :, :, :]
+
             ## 리소스 릴리즈.
             cap.release()
             cv2.destroyAllWindows()
-            transformed_frames = np.array(transformed_frames)
-        return transformed_frames, fps
+        return transformed_frames, fps_local
 
 
     def detect_with_draw(self, output_path: str) -> None:
@@ -423,21 +435,16 @@ class ROIProcessor:
         R_means_list = []
         L_means_list = []
         M_means_list = []
-
-        ## ROI별 RGB 평균값 담을 딕셔너리. (혼선 방지용)
-        R_means_dict = {"R": None, "G": None, "B": None}
-        L_means_dict = {"R": None, "G": None, "B": None}
-        M_means_dict = {"R": None, "G": None, "B": None}
         
         ## 랜드마크 검출 모델 불러오기.
         with FaceLandmarker.create_from_options(options) as landmarker:
             cap = cv2.VideoCapture(self.video_path)
-            fps = int(cap.get(cv2.CAP_PROP_FPS))
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps_local = int(cap.get(cv2.CAP_PROP_FPS))
+            total_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frame_idx = 0
 
             ## tqdm 진행도 설정.
-            with tqdm(total=total_frames, desc="Processing Frames", unit="frame") as pbar:
+            with tqdm(total=total_frame_count, desc="Processing Frames", unit="frame") as pbar:
 
                 ## 프레임 단위 루프 진행.
                 while cap.isOpened():
@@ -448,7 +455,7 @@ class ROIProcessor:
                     ## 랜드마크 검출.
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-                    timestep_ms= int((frame_idx / fps) * 1000)
+                    timestep_ms= int((frame_idx / fps_local) * 1000)
                     detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
                     ## 프레임 RGB 평균값 구하기.
                     R_mean, L_mean, M_mean = self.calculate(frame, detection_result)
@@ -463,18 +470,24 @@ class ROIProcessor:
             L_means_array = interpolate(np.array(L_means_list).T)
             M_means_array = interpolate(np.array(M_means_list).T)
 
-            ## 직관적인 아웃풋 형태를 위해 딕셔너리로 재정의.
-            R_means_dict['R'] = R_means_array[0]
-            R_means_dict['G'] = R_means_array[1]
-            R_means_dict['B'] = R_means_array[2]
-            L_means_dict['R'] = L_means_array[0]
-            L_means_dict['G'] = L_means_array[1]
-            L_means_dict['B'] = L_means_array[2]
-            M_means_dict['R'] = M_means_array[0]
-            M_means_dict['G'] = M_means_array[1]
-            M_means_dict['B'] = M_means_array[2]
+            segment_size = int(fps_local * self.seg_time_interval)
+            padding_size = (segment_size - (total_frame_count % segment_size)) % segment_size
+            segment_num = int((total_frame_count + padding_size) / segment_size)
+          
+            if padding_size > 0:
+                R_means_array = np.pad(R_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
+                L_means_array = np.pad(L_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
+                M_means_array = np.pad(M_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
+
+            R_means_array = R_means_array.reshape(3, segment_num, segment_size).transpose(1, 0, 2)
+            L_means_array = L_means_array.reshape(3, segment_num, segment_size).transpose(1, 0, 2)
+            M_means_array = M_means_array.reshape(3, segment_num, segment_size).transpose(1, 0, 2)
+
+            R_means_array = R_means_array[:-1, :, :]
+            L_means_array = L_means_array[:-1, :, :]
+            M_means_array = M_means_array[:-1, :, :]
 
             ## 리소스 릴리즈.
             cap.release()
             cv2.destroyAllWindows()
-        return R_means_dict, L_means_dict, M_means_dict, fps
+        return R_means_array, L_means_array, M_means_array, fps_local
