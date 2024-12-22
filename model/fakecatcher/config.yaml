@@ -1,0 +1,5 @@
+video_path: "video/short.mp4"
+model_path: "misc/face_landmarker.task"
+
+fps_standard: 30
+seg_time_interval: 3
