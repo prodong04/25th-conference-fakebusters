@@ -412,7 +412,6 @@ class PPG_C:
             # 현재 윈도우에 대한 평균 및 정규화
             rgb_base = np.mean(self.RGB[win_start:win_end], axis=0)
             rgb_norm = self.RGB[win_start:win_end] / rgb_base
-
             Xs = 3 * rgb_norm[:, 0] - 2 * rgb_norm[:, 1]
             Ys = 1.5 * rgb_norm[:, 0] + rgb_norm[:, 1] - 1.5 * rgb_norm[:, 2]
 
