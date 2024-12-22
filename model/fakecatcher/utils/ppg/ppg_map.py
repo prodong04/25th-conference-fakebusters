@@ -1,15 +1,17 @@
 import numpy as np
 from .ppg_c import PPG_C
+from interpolate import frequency_resample
 
 class PPG_MAP:
     """
     """
-    def __init__(self, transformed_frames: list[np.ndarray], fps: int):
+    def __init__(self, transformed_frames: list[np.ndarray], fps: int, config: dict):
         """
         ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
         """
         self.transformed_frames = transformed_frames
-        self.fps = fps
+        self.fps_standard = config["fps_standard"]
+        self.seg_time_interval = config["seg_time_interval"]
 
     def compute_map(self):
         """
@@ -39,6 +41,7 @@ class PPG_MAP:
             for col in range(num_cols):
                 PPG = PPG_C.from_RGB(RGB=region_means[:, col, row, :], fps=self.fps)
                 signal = PPG.compute_signal()
+                signal = frequency_resample(signal, target_interval=self.seg_time_interval, original_fps=self.fps, target_fps=self.fps_standard)
                 fft_values = np.fft.fft(signal)
                 psd_values = np.abs(fft_values)**2
                 normalized_signal = ((signal - signal.min()) / (signal.max() - signal.min()) * 255).astype(np.uint8)
