@@ -121,8 +121,8 @@ class ROIProcessor:
         427 : [120,44 ], 449 : [114,12 ], 347 : [114,30 ], 425 : [114,40 ]}
 
 
-    def __init__(self, config: dict):
-        self.video_path = config["video_path"]
+    def __init__(self, video_path: str, config: dict):
+        self.video_path = video_path
         self.model_path = config["model_path"]
         self.fps_standard = int(config["fps_standard"])
         self.seg_time_interval = int(config["seg_time_interval"])
