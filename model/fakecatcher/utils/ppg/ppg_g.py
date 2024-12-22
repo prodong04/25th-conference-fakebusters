@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import butter
+from scipy.signal import butter, filtfilt
 from scipy.fft import fft, fftfreq
 
 class PPG_G:

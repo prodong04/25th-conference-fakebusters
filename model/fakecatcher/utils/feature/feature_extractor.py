@@ -3,7 +3,7 @@ from typing import Tuple, Dict, List
 from scipy.signal import csd
 from scipy.stats import entropy
 from scipy.fft import fft, fftfreq
-from signal_transformation import *
+from .signal_transformation import *
 
 class FeatureExtractor:
     """
@@ -124,7 +124,8 @@ class FeatureExtractor:
         """
         num_signals, signal_length = signals.shape
 
-        num_windows = signal_length//window_size    
+        num_windows = signal_length//window_size  
+        assert num_windows > 1, "segment length는 fps의 2배여야합니다다"  
         reshaped_signals = signals[:, :num_windows * window_size].reshape(num_signals, num_windows, window_size)
 
         # 1. std
@@ -137,7 +138,9 @@ class FeatureExtractor:
 
         # 3.rmssd(1sec difference)
         # 1초 간격의 signal끼리 차분
+        
         successive_difference =  np.diff(reshaped_signals[:,:,0], axis=1)
+        
         # 제곱의 평균의 루트 계산
         rmssd = np.sqrt(np.mean(successive_difference**2,axis=1))
         # 4. sdnni
@@ -156,6 +159,7 @@ class FeatureExtractor:
         
         features = np.vstack([std, sdann, rmssd, sdnni, sdsd, mean_autocorrelations, sh_entropy])
 
+        assert not np.any(np.isinf(features)), "nan이 존재함함"
         return features    
 
 import json
@@ -188,51 +192,52 @@ def majority_voting(probabilities):
     return majority_vote
 
 if __name__ == "__main__":
-    file_path = "ppg_data.json"
+    from utils.roi import ROIProcessor
 
-    with open(file_path, 'r') as json_file:
-        data = json.load(json_file)
+    video_path = "/root/audio-visual-forensics/test.mp4"
+    model_path = "misc/face_landmarker.task"
+    landmarker = ROIProcessor(video_path, model_path)
+    R_means_dict, L_means_dict, M_means_dict, fps = landmarker.detect_with_calculate()
 
-    # Convert lists in JSON to numpy arrays
-    R_ROI_G_PPG = data["L_ROI_G_PPG"]
-    R_ROI_C_PPG = data["M_ROI_G_PPG"]
-    L_ROI_G_PPG = data["R_ROI_G_PPG"]
-    L_ROI_C_PPG = data["L_ROI_C_PPG"]
-    M_ROI_G_PPG = data["M_ROI_C_PPG"]
-    M_ROI_C_PPG = data["R_ROI_C_PPG"]
 
-    R_ROI_G_segments = split_segments(R_ROI_G_PPG, 72)
-    R_ROI_C_segments = split_segments(R_ROI_C_PPG, 72)
-    L_ROI_G_segments = split_segments(L_ROI_G_PPG, 72)
-    L_ROI_C_segments = split_segments(L_ROI_C_PPG, 72)
-    M_ROI_G_segments = split_segments(M_ROI_G_PPG, 72)
-    M_ROI_C_segments = split_segments(M_ROI_C_PPG, 72)
+
+    R_ROI_G_PPG = PPG_G(R_means_dict, fps).compute_signal()
+    print("R_ROI_G_PPG: ", len(R_ROI_G_PPG))
+
+    R_ROI_C_PPG = PPG_C(R_means_dict, fps).compute_signal()
+    print("R_ROI_C_PPG: ", len(R_ROI_C_PPG))
+
+    L_ROI_G_PPG = PPG_G(L_means_dict, fps).compute_signal()
+    print("L_ROI_G_PPG: ", len(L_ROI_G_PPG))
+
+    L_ROI_C_PPG = PPG_C(L_means_dict, fps).compute_signal()
+    print("L_ROI_C_PPG: ", len(L_ROI_C_PPG))
+
+    M_ROI_G_PPG = PPG_G(M_means_dict, fps).compute_signal()
+    print("M_ROI_G_PPG: ", len(M_ROI_G_PPG))
+
+    M_ROI_C_PPG = PPG_C(M_means_dict, fps).compute_signal()
+    print("M_ROI_C_PPG: ", len(M_ROI_C_PPG))
+
+    R_ROI_G_segments = split_segments(R_ROI_G_PPG, fps)
+    R_ROI_C_segments = split_segments(R_ROI_C_PPG, fps)
+    L_ROI_G_segments = split_segments(L_ROI_G_PPG, fps)
+    L_ROI_C_segments = split_segments(L_ROI_C_PPG, fps)
+    M_ROI_G_segments = split_segments(M_ROI_G_PPG, fps)
+    M_ROI_C_segments = split_segments(M_ROI_C_PPG, fps)
 
     combined_segments = combine_segments(
-        R_ROI_G_segments, 
-        R_ROI_C_segments, 
-        L_ROI_G_segments, 
-        L_ROI_C_segments, 
-        M_ROI_G_segments, 
-        M_ROI_C_segments
+    R_ROI_G_segments, 
+    R_ROI_C_segments, 
+    L_ROI_G_segments, 
+    L_ROI_C_segments, 
+    M_ROI_G_segments, 
+    M_ROI_C_segments
     )
 
     features = []
     for ppg in combined_segments:
-        fe = FeatureExtractor(24, *ppg)
+        fe = FeatureExtractor(fps, *ppg)
         feature = fe.feature_union()
         features.append(feature)
     features = np.array(features)
-    labels = np.ones(features.shape[0], dtype=int)
-
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=42)
-
-    svr = SVR()
-    svr.fit(X_train, y_train)
-
-    segment_probabilities = svr.predict(X_test)
-    video_labels = [majority_voting(segment_probabilities)]
-
-    print("Segment Probabilities:", segment_probabilities)
-    print("Video Labels:", video_labels)
-    print("real label: ", labels)
