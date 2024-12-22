@@ -15,7 +15,19 @@ class PPG_G:
         """
         self.RGB_mean_dict = RGB_mean_dict
         self.fps = fps
+        self.trace = None
+        self.extract_G_trace()
 
+    @classmethod
+    def from_RGB(cls, trace: np.ndarray, fps: float):
+        """
+        생성자 오버로딩 느낌
+        """
+        obj = cls.__new__(cls)
+        obj.RGB_mean_dict = None
+        obj.fps = fps
+        obj.trace = trace[:,1]
+        return obj
     ## ====================================================================
     ## ============================== Utils ===============================
     ## ====================================================================
@@ -92,7 +104,7 @@ class PPG_G:
             raw_G_trace: ROI 영상 G채널의 프레임 별 평균값을 저장한 넘파이 배열. [F]
         """
         raw_G_trace = self.RGB_mean_dict["G"]
-        return raw_G_trace
+        self.raw_G_trace = raw_G_trace
 
     def filter_G_trace(self, raw_G_trace: np.ndarray) -> np.ndarray:
         """
@@ -309,8 +321,7 @@ class PPG_G:
         """
         window_size = int(self.fps * 1.6)
         step_size = int(self.fps * 0.8)
-        raw_G_trace = self.extract_G_trace()
-        filtered_G_trace = self.filter_G_trace(raw_G_trace)
+        filtered_G_trace = self.filter_G_trace(self.trace)
         rc_array = self.SSA(filtered_G_trace, window_size)
         rc_trace = self.RC_selection(rc_array, tolerance=0.2)
         preliminary = self.overlap_add(rc_trace, window_size, step_size)
