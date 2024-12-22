@@ -479,9 +479,9 @@ class ROIProcessor:
                 L_means_array = np.pad(L_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
                 M_means_array = np.pad(M_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
 
-            R_means_array = R_means_array.reshape(3, segment_num, segment_size).transpose(1, 0, 2)
-            L_means_array = L_means_array.reshape(3, segment_num, segment_size).transpose(1, 0, 2)
-            M_means_array = M_means_array.reshape(3, segment_num, segment_size).transpose(1, 0, 2)
+            R_means_array = R_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
+            L_means_array = L_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
+            M_means_array = M_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
 
             R_means_array = R_means_array[:-1, :, :]
             L_means_array = L_means_array[:-1, :, :]
