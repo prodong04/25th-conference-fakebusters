@@ -1,0 +1,2 @@
+meta_data_csv_path : /root/audio-visual-forensics/data/FakeAVCeleb/balanced_sample.csv
+model_path : /root/ybigta/25th-conference-fakebusters/model/fakecatcher/misc/face_landmarker.task

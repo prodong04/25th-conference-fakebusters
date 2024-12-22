@@ -51,8 +51,8 @@ class FeatureExtractor:
         f1 = self.F1(log_D_C) # (2, )
         f3 = self.F3(S_union_D_C)
         f4 = self.F4(S_union_D_C, self.fps)
-        mean_S = np.mean(S_sac, axis=1)
-        max_S = np.max(S_sac, axis=1)
+        mean_S = np.mean(S_sac, axis=1).real
+        max_S = np.max(S_sac, axis=1).real
         f1_flat = f1.flatten()
         f3_flat = f3.flatten()
         f4_flat = f4.flatten()
@@ -124,7 +124,8 @@ class FeatureExtractor:
         """
         num_signals, signal_length = signals.shape
 
-        num_windows = signal_length//window_size    
+        num_windows = signal_length//window_size  
+        assert num_windows > 1, "segment length는 fps의 2배여야합니다다"  
         reshaped_signals = signals[:, :num_windows * window_size].reshape(num_signals, num_windows, window_size)
 
         # 1. std
@@ -137,10 +138,11 @@ class FeatureExtractor:
 
         # 3.rmssd(1sec difference)
         # 1초 간격의 signal끼리 차분
+        
         successive_difference =  np.diff(reshaped_signals[:,:,0], axis=1)
+        
         # 제곱의 평균의 루트 계산
         rmssd = np.sqrt(np.mean(successive_difference**2,axis=1))
-
         # 4. sdnni
         window_std = reshaped_signals.std(axis=2)
         sdnni = np.mean(window_std, axis=1)
@@ -157,23 +159,85 @@ class FeatureExtractor:
         
         features = np.vstack([std, sdann, rmssd, sdnni, sdsd, mean_autocorrelations, sh_entropy])
 
+        assert not np.any(np.isinf(features)), "nan이 존재함함"
         return features    
 
 import json
-if __name__=="__main__":
-    file_path = "ppg_data.json"
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.svm import SVR
 
-    with open(file_path, 'r') as json_file:
-        data = json.load(json_file)
+def split_segments(data, segment_length):
+    """
+    Split data into segments of fixed length.
+    """
+    valid_length = len(data) - (len(data) % segment_length)
+    return [np.array(data[i:i + segment_length]) for i in range(0, valid_length, segment_length)]
 
-    # Convert lists in JSON to numpy arrays
-    ppg_data = [
-        np.array(data["L_ROI_G_PPG"]),
-        np.array(data["M_ROI_G_PPG"]),
-        np.array(data["R_ROI_G_PPG"]),
-        np.array(data["L_ROI_C_PPG"]),
-        np.array(data["M_ROI_C_PPG"]),
-        np.array(data["R_ROI_C_PPG"])
-    ]
-    fe = FeatureExtractor(60, *ppg_data)
-    print(fe.feature_union())
+def combine_segments(*segments):
+    """
+    Combine multiple segments based on indices.
+    """
+    return list(zip(*segments))
+
+def majority_voting(probabilities):
+    """
+    Perform majority voting on the predicted probabilities.
+    """
+    mean_prob = np.mean(probabilities)
+    majority_vote = np.round(mean_prob)
+    return majority_vote
+
+if __name__ == "__main__":
+    from utils.roi import ROIProcessor
+
+    video_path = "/root/audio-visual-forensics/test.mp4"
+    model_path = "misc/face_landmarker.task"
+    landmarker = ROIProcessor(video_path, model_path)
+    R_means_dict, L_means_dict, M_means_dict, fps = landmarker.detect_with_calculate()
+
+
+
+    R_ROI_G_PPG = PPG_G(R_means_dict, fps).compute_signal()
+    print("R_ROI_G_PPG: ", len(R_ROI_G_PPG))
+
+    R_ROI_C_PPG = PPG_C(R_means_dict, fps).compute_signal()
+    print("R_ROI_C_PPG: ", len(R_ROI_C_PPG))
+
+    L_ROI_G_PPG = PPG_G(L_means_dict, fps).compute_signal()
+    print("L_ROI_G_PPG: ", len(L_ROI_G_PPG))
+
+    L_ROI_C_PPG = PPG_C(L_means_dict, fps).compute_signal()
+    print("L_ROI_C_PPG: ", len(L_ROI_C_PPG))
+
+    M_ROI_G_PPG = PPG_G(M_means_dict, fps).compute_signal()
+    print("M_ROI_G_PPG: ", len(M_ROI_G_PPG))
+
+    M_ROI_C_PPG = PPG_C(M_means_dict, fps).compute_signal()
+    print("M_ROI_C_PPG: ", len(M_ROI_C_PPG))
+
+    R_ROI_G_segments = split_segments(R_ROI_G_PPG, fps)
+    R_ROI_C_segments = split_segments(R_ROI_C_PPG, fps)
+    L_ROI_G_segments = split_segments(L_ROI_G_PPG, fps)
+    L_ROI_C_segments = split_segments(L_ROI_C_PPG, fps)
+    M_ROI_G_segments = split_segments(M_ROI_G_PPG, fps)
+    M_ROI_C_segments = split_segments(M_ROI_C_PPG, fps)
+
+    combined_segments = combine_segments(
+    R_ROI_G_segments, 
+    R_ROI_C_segments, 
+    L_ROI_G_segments, 
+    L_ROI_C_segments, 
+    M_ROI_G_segments, 
+    M_ROI_C_segments
+    )
+
+    features = []
+    for ppg in combined_segments:
+        fe = FeatureExtractor(fps, *ppg)
+        feature = fe.feature_union()
+        features.append(feature)
+    features = np.array(features)

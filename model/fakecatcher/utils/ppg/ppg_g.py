@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.fft import fft, fftfreq
 from scipy.signal import butter, filtfilt
+from scipy.fft import fft, fftfreq
 
 class PPG_G:
     """
@@ -230,7 +230,7 @@ class PPG_G:
     ## ===================== SSA and Spectral Masking =====================
     ## ====================================================================
 
-    def instantaeous_HR(self, preliminary: np.ndarray) -> float:
+    def instantaeous_HR(self, preliminary: np.ndarray, window_size: int, step_size: int) -> float:
         """
         SSA decompositon, RC selection과 overlap adding으로 얻은 preliminary를 레퍼런스로 재활용.
 
@@ -240,10 +240,6 @@ class PPG_G:
         Returns:
             f_r: 마스킹 기준으로 사용되는 dominant frequency 값.
         """
-        ## 윈도우 사이즈 10초, 스텝 사이즈 1초. (프레임 단위)
-        window_size =  self.fps * 10
-        step_size = self.fps
-
         ## 윈도우 단위로 Fast Fourrier Transform 적용.
         ## 각각의 윈도우에 대한 dominant frequency 계산 후 평균값 도출.
         freqs = []
@@ -311,12 +307,14 @@ class PPG_G:
         Returns:
             pulse_signal: PPG-G 시그널.
         """
+        window_size = int(self.fps * 1.6)
+        step_size = int(self.fps * 0.8)
         raw_G_trace = self.extract_G_trace()
         filtered_G_trace = self.filter_G_trace(raw_G_trace)
-        rc_array = self.SSA(filtered_G_trace, window_size=120)
+        rc_array = self.SSA(filtered_G_trace, window_size)
         rc_trace = self.RC_selection(rc_array, tolerance=0.2)
-        preliminary = self.overlap_add(rc_trace, window_size=120, step_size=30)
-        f_r = self.instantaeous_HR(preliminary)
-        pulse_signal = self.spectral_mask(rc_array, f_r, window_size=120, step_size=30)
+        preliminary = self.overlap_add(rc_trace, window_size, step_size)
+        f_r = self.instantaeous_HR(preliminary, window_size, step_size)
+        pulse_signal = self.spectral_mask(rc_array, f_r, window_size, step_size)
         return pulse_signal
         

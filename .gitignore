@@ -177,3 +177,5 @@ sample_data/002
 
 # Ignore data files
 frontend/dbust/public/data
+
+**/*.pkl
