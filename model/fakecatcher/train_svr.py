@@ -6,11 +6,12 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from utils.roi import ROIProcessor
-from fakeavceleb import load_data
+from data.fakeavceleb import load_data
 from utils.ppg.ppg_c import PPG_C
 from utils.ppg.ppg_g import PPG_G
+from utils.ppg.interpolate import frequency_resample
 from utils.feature.feature_extractor import FeatureExtractor
-from svr_model import SVRModel
+from svr.svr_model import SVRModel
 
 
 def split_segments(data, segment_length):
@@ -75,47 +76,61 @@ if __name__ == "__main__":
     video_paths, true_labels = load_data(root_directory, config["meta_data_csv_path"])
     
     # Feature Extraction
-    features_list = []
+    video_features = []
     video_labels = []  # 비디오 단위 레이블 저장
+    time_interval = config['seg_time_interval']
+    target_fps = config['fps_standard']
 
     for video_path, true_label in tqdm(zip(video_paths, true_labels), desc='training'):
         try:
             
-            landmarker = ROIProcessor(video_path, config["model_path"])
-            R_means_dict, L_means_dict, M_means_dict, fps = landmarker.detect_with_calculate()
+            landmarker = ROIProcessor(video_path, config)
+            R_means_array, L_means_array, M_means_array, original_fps = landmarker.detect_with_calculate()
             
-            # Compute PPG signals
-            G_R, G_L, G_M = [PPG_G(d, fps).compute_signal() for d in [R_means_dict, L_means_dict, M_means_dict]]
-            C_R, C_L, C_M = [PPG_C(d, fps).compute_signal() for d in [R_means_dict, L_means_dict, M_means_dict]]
-            
-            # Segment signals
-            R_ROI_G_segments, R_ROI_C_segments = split_segments(G_R, 50), split_segments(C_R, 50)
-            L_ROI_G_segments, L_ROI_C_segments = split_segments(G_L, 50), split_segments(C_L, 50)
-            M_ROI_G_segments, M_ROI_C_segments = split_segments(G_M, 50), split_segments(C_M, 50)
+            if R_means_array.shape[0] == 0:
+                logger.warning(f"Skipping video {video_path} because R_means_array is empty.")
+                continue
 
-            # Combine segments
-            combined_segments = combine_segments(
-                R_ROI_G_segments, R_ROI_C_segments, 
-                L_ROI_G_segments, L_ROI_C_segments, 
-                M_ROI_G_segments, M_ROI_C_segments
-            )
-
-            # Extract features for each segment
             features = []
-            for ppg in combined_segments:
-                fe = FeatureExtractor(fps, *ppg)
+            for i in range(R_means_array.shape[0]):
+                G_R = PPG_G.from_RGB(R_means_array[i], original_fps).compute_signal()
+                G_L = PPG_G.from_RGB(L_means_array[i], original_fps).compute_signal() 
+                G_M = PPG_G.from_RGB(M_means_array[i], original_fps).compute_signal() 
+                C_R = PPG_C.from_RGB(R_means_array[i], original_fps).compute_signal()
+                C_L = PPG_C.from_RGB(L_means_array[i], original_fps).compute_signal()
+                C_M = PPG_C.from_RGB(M_means_array[i], original_fps).compute_signal()
+            
+                # Segment signals(1차원 np)
+                R_ROI_G_segments, R_ROI_C_segments = frequency_resample(G_R, time_interval, original_fps, target_fps), frequency_resample(C_R, time_interval, original_fps, target_fps)
+                L_ROI_G_segments, L_ROI_C_segments = frequency_resample(G_L, time_interval, original_fps, target_fps), frequency_resample(C_L, time_interval, original_fps, target_fps)
+                M_ROI_G_segments, M_ROI_C_segments = frequency_resample(G_M, time_interval, original_fps, target_fps), frequency_resample(C_M, time_interval, original_fps, target_fps)
+
+                # [G_L, G_M, G_R, C_L, C_M, C_R]이 한 행임임
+                ppg = [
+                    L_ROI_G_segments,
+                    M_ROI_G_segments,
+                    R_ROI_G_segments,
+                    L_ROI_C_segments,
+                    M_ROI_C_segments,
+                    R_ROI_C_segments
+                ]
+           
+                # Extract features for each segment
+                fe = FeatureExtractor(config['fps_standard'], *ppg)
+
                 features.append(fe.feature_union())
             
-            features_list.append(np.array(features))
+            video_features.append(np.array(features))
             video_labels.append(true_label)
 
         except Exception as e:
             logger.error(f"Error processing video {video_path}: {e}", exc_info=True)
-            break
+            exit()
 
     # Combine all features and labels for training
-    all_features = np.vstack(features_list)
-    all_labels = np.hstack([[label] * len(features) for label, features in zip(video_labels, features_list)])
+    breakpoint()
+    all_features = np.vstack(video_features)
+    all_labels = np.hstack([[label] * len(features) for label, features in zip(video_labels, video_features)])
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(all_features, all_labels, test_size=0.3, random_state=42)
 
@@ -123,11 +138,13 @@ if __name__ == "__main__":
     model = SVRModel()
     model.train(X_train, y_train)
 
+    model.save_model('svr_model.pkl')
+
     # Predict video labels using majority voting
     correct_predictions = 0
-    total_videos = len(features_list)
+    total_videos = len(video_features)
 
-    for features, actual_label in zip(features_list, video_labels):
+    for features, actual_label in zip(video_features, video_labels):
         segment_probabilities = model.predict(features)  # 각 세그먼트 확률 예측
         predicted_label = majority_voting(segment_probabilities)  # 다수결 투표로 비디오 레이블 결정
         print(f"Actual: {actual_label}, Predicted: {predicted_label}")
@@ -139,5 +156,3 @@ if __name__ == "__main__":
     accuracy = correct_predictions / total_videos
     print(f"Video-level Accuracy: {accuracy * 100:.2f}%")
 
-    # 모델 저장
-    model.save_model('svr_model.pkl')
