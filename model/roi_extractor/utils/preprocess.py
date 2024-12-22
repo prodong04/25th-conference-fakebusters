@@ -476,6 +476,26 @@ class VideoROIExtractor:
     ## ==============================  PROCESS  =============================
     ## ======================================================================
 
+    def save_frames(self, rois: np.ndarray):
+        """
+        ROI 배열을 개별 이미지 파일로 저장.
+        
+        Args:
+            rois: ROI로 잘린 프레임 배열 (num_frames, height, width, channels)
+        """
+        video_name = os.path.splitext(os.path.basename(self.input_video_path))[0]
+        output_dir = os.path.join(self.roi_directory, f"{video_name}_frames")
+
+        # 디렉토리 생성
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 프레임 저장
+        for idx, roi in enumerate(rois):
+            output_path = os.path.join(output_dir, f"frame_{idx:04d}.png")
+            cv2.imwrite(output_path, roi)
+
+        return output_dir
+
     def preprocess_video(self) -> np.ndarray:
         """
         비디오 파일에서 얼굴을 감지하고, 해당 얼굴의 랜드마크를 기준으로 얼굴 영역을 자르고, 
