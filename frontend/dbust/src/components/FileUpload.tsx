@@ -106,6 +106,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, setVideoUrl }) =>
                 const filePath = response.headers.get('File-Path');
                 console.log('File path:', filePath);
 
+                const score = response.headers.get('Score');
+                console.log('Score:', score);
+
                 const videoBlob = await response.blob();
                 const videoUrl = URL.createObjectURL(videoBlob);
                 console.log('Video URL:', videoUrl);

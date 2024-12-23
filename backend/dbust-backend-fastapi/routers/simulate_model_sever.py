@@ -12,6 +12,40 @@ router = APIRouter(
 
 VIDEO_DIR = "data/video"
 
+
+hard_path = "data/video/chimmark.mp4"
+
+
+@router.post("/test")
+async def main(file: UploadFile = File(...)):
+    # Define the directory to save the file
+    save_dir = "data/video"
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Generate a unique filename
+    file_path = os.path.join(save_dir, file.filename)
+    
+    # Save the uploaded file
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    def iterfile():
+        with open(file_path, mode="rb") as file:
+            yield from file
+    
+    score = random.randint(0, 100)
+    
+    headers = {
+        "File-Path": file_path,
+        "Score": f"{score}",
+        "Access-Control-Expose-Headers": "File-Path, Score"
+    }
+
+    return StreamingResponse(iterfile(), media_type="video/mp4", headers=headers)
+
+
+
 @router.post("/lipforensic")
 async def roi_model(file: UploadFile = File(...)):
     '''
@@ -25,10 +59,12 @@ async def roi_model(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
         
     video_file = open(file_path, "rb")
+    print(video_file)
     score = random.randint(0, 100)
 
     response = StreamingResponse(video_file, media_type="video/mp4")
     response.headers['Score'] = f"{score}"
+    print(response.headers)
     return response
 
 @router.post("/mmnet")
