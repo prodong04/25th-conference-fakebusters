@@ -6,9 +6,10 @@ import { HStack } from "@chakra-ui/react";
 interface FileUploadProps {
     onFileUpload: (file: File) => void;
     setVideoUrl: (url: string) => void;
+    setScore: (score: string) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, setVideoUrl }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, setVideoUrl, setScore }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [isPreviewShown, setIsPreviewShown] = useState(false);
@@ -118,6 +119,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, setVideoUrl }) =>
                 // await new Promise((resolve) => setTimeout(resolve, 1000));
                 // console.log('Simulated upload completed in 1000 milliseconds');
                 
+                setScore(score || '');
                 setVideoUrl(videoUrl);
                 onFileUpload(selectedFile);
 
@@ -130,7 +132,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, setVideoUrl }) =>
                 setIsProcessing(false);
             }
         }
-    }, [selectedFile, onFileUpload, setVideoUrl]);
+    }, [selectedFile, onFileUpload, setVideoUrl, setScore]);
 
     const handleClear = useCallback(() => {
         setPreview(null);
