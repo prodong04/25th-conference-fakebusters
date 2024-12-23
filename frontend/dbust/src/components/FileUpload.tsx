@@ -5,9 +5,10 @@ import { HStack } from "@chakra-ui/react";
 
 interface FileUploadProps {
     onFileUpload: (file: File) => void;
+    setVideoUrl: (url: string) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, setVideoUrl }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [isPreviewShown, setIsPreviewShown] = useState(false);
@@ -65,8 +66,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
     const handleUpload = useCallback(async () => {
         if (selectedFile) {
             setIsProcessing(true);
-            const startTime = Date.now();
-            console.log(`Upload started at: ${new Date(startTime).toISOString()}`);
+            // const startTime = Date.now();
+            // console.log(`Upload started at: ${new Date(startTime).toISOString()}`);
 
             try {
                 // File Upload
@@ -89,10 +90,32 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
                 // const data = await response.json();
                 // console.log('File uploaded successfully:', data);
 
-                // Simulate upload
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                console.log('Simulated upload completed in 1000 milliseconds');
+                // Step 2: Process with lipforensic model
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                const response = await fetch('http://localhost:8000/api/models/test', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to post video');
+                }
+
+                const filePath = response.headers.get('File-Path');
+                console.log('File path:', filePath);
+
+                const videoBlob = await response.blob();
+                const videoUrl = URL.createObjectURL(videoBlob);
+                console.log('Video URL:', videoUrl);
+
                 
+                // // Simulate upload
+                // await new Promise((resolve) => setTimeout(resolve, 1000));
+                // console.log('Simulated upload completed in 1000 milliseconds');
+                
+                setVideoUrl(videoUrl);
                 onFileUpload(selectedFile);
 
                 setPreview(null);
@@ -104,7 +127,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
                 setIsProcessing(false);
             }
         }
-    }, [selectedFile, onFileUpload]);
+    }, [selectedFile, onFileUpload, setVideoUrl]);
 
     const handleClear = useCallback(() => {
         setPreview(null);
