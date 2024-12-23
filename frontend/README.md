@@ -2,6 +2,6 @@
 
 `cd frontend/dbust`
 
-`npm install node_modules.txt`
+`npm install`
 
 `npx next dev`
