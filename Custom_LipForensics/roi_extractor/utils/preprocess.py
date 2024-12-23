@@ -72,9 +72,29 @@ class VideoROIExtractor:
         """
         비디오 파일 읽어 프레임 이미지 배열로 반환.
         """
-        videogen = skvideo.io.vread(self.input_video_path)
-        frames = np.array([frame for frame in videogen])
-        self.frames = frames
+        frames = []
+        cap = cv2.VideoCapture(self.input_video_path)   # 비디오 파일 열기
+        if not cap.isOpened():
+            raise ValueError(f"Unable to open video file: {self.input_video_path}")
+
+        # 비디오 속성 가져오기
+        fps = int(cap.get(cv2.CAP_PROP_FPS))  # FPS 가져오기
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # 총 프레임 수
+
+        with tqdm(total=total_frames, desc="Processing Frames", unit="frame") as pbar:
+            while cap.isOpened():
+                ret, frame = cap.read()  # 프레임 읽기
+                if not ret:  # 더 이상 프레임이 없으면 종료
+                    break
+                frames.append(frame)  # 프레임 저장
+                pbar.update(1)  # 진행도 업데이트
+
+        cap.release()  # 비디오 파일 닫기
+
+        if not frames:  # 프레임이 비어 있으면 에러 발생
+            raise ValueError(f"No frames could be read from video: {self.input_video_path}")
+
+        self.frames = np.array(frames)  # 리스트를 NumPy 배열로 변환
 
     def yield_frame(self):
         """

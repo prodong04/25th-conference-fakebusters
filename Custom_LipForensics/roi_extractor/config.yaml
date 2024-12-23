@@ -2,8 +2,8 @@
 video_directory: 'data/video'
 audio_directory: 'data/audio'
 roi_directory: 'data/roi'
-mean_face_path: "misc/20words_mean_face.npy"
-face_predictor_path: "misc/shape_predictor_68_face_landmarks.dat"
+mean_face_path: "/root/25th-conference-fakebusters/Custom_LipForensics/roi_extractor/misc/20words_mean_face.npy"
+face_predictor_path: "/root/25th-conference-fakebusters/Custom_LipForensics/roi_extractor/misc/shape_predictor_68_face_landmarks.dat"
 
 
 ## ROI Settings
@@ -32,7 +32,7 @@ face_predictor_path: "misc/shape_predictor_68_face_landmarks.dat"
 ##
 ## 프리셋 중 하나를 골라서 사용할 수 있습니다.
 ## mouth, nose, right eye, right cheek, right eyebrow, left eye, left cheek, left eyebrow,
-roi_target: "right eye"
+roi_target: "mouth"
 ## 새로운 커스텀 프리셋을 만들어 사용할 수 있습니다.
 ## 원하는 인덱스들을 골라서 리스트 안에 담아주세요.
 ## 기존 프리셋을 사용하기 원하는 경우, 리스트를 비워두세요.
@@ -40,7 +40,7 @@ custom_target: []
 
 
 ## Video Landmark Options
-skip_frames: 10
+skip_frames: 1
 resized_frame_height: 100
 resized_frame_width: 200
 
