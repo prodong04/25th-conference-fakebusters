@@ -1,6 +1,6 @@
 video_path: "video/short.mp4"
-model_path : /root/ybigta/25th-conference-fakebusters/model/fakecatcher/misc/face_landmarker.task
-meta_data_csv_path : /root/audio-visual-forensics/data/FakeAVCeleb/balanced_sample.csv
+model_path : /root/25th-conference-fakebusters/model/fakecatcher/utils/face_landmarker.task
+meta_data_csv_path : /root/deepfake_detection/FakeAVCeleb/meta_data_cleaned.csv
 
 fps_standard: 30
 seg_time_interval: 3

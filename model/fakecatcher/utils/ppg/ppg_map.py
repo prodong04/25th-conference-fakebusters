@@ -1,6 +1,6 @@
 import numpy as np
 from .ppg_c import PPG_C
-from interpolate import frequency_resample
+from .interpolate import frequency_resample
 
 class PPG_MAP:
     """
@@ -10,6 +10,7 @@ class PPG_MAP:
         ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
         """
         self.transformed_frames = transformed_frames
+        self.fps = fps
         self.fps_standard = config["fps_standard"]
         self.seg_time_interval = config["seg_time_interval"]
 
@@ -33,21 +34,17 @@ class PPG_MAP:
         region_means = regions_reshaped.mean(axis=(2, 4))
         num_cols = region_means.shape[1]
         num_rows = region_means.shape[2]
-        grid_rows = num_cols * num_rows * 2
-        grid = np.empty(shape=(grid_rows, num_frames))
+        grid = []
 
-        iter = 0
         for row in range(num_rows):
             for col in range(num_cols):
                 PPG = PPG_C.from_RGB(RGB=region_means[:, col, row, :], fps=self.fps)
                 signal = PPG.compute_signal()
-                signal = frequency_resample(signal, target_interval=self.seg_time_interval, original_fps=self.fps, target_fps=self.fps_standard)
+                signal = frequency_resample(signal, time_interval=self.seg_time_interval, original_fps=self.fps, target_fps=self.fps_standard)
                 fft_values = np.fft.fft(signal)
                 psd_values = np.abs(fft_values)**2
                 normalized_signal = ((signal - signal.min()) / (signal.max() - signal.min()) * 255).astype(np.uint8)
                 normalized_density = ((psd_values - psd_values.min()) / (psd_values.max() - psd_values.min()) * 255).astype(np.uint8)
-                grid[iter,:] = normalized_signal
-                iter+=1
-                grid[iter,:] = normalized_density
-                iter+=1
-        return grid
+                grid.append(normalized_signal)
+                grid.append(normalized_density)
+        return np.array(grid)
