@@ -2,9 +2,10 @@ import React from 'react';
 
 interface AugmentedVideoProps {
   videoUrl: string;
+  score: string | null;
 }
 
-const AugmentedVideo: React.FC<AugmentedVideoProps> = ({ videoUrl }) => {
+const AugmentedVideo: React.FC<AugmentedVideoProps> = ({ videoUrl, score }) => {
   return (
     <div className="bg-gray-100">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -15,12 +16,14 @@ const AugmentedVideo: React.FC<AugmentedVideoProps> = ({ videoUrl }) => {
             <div className="group relative">
               <video
                 className="w-full max-w-2xl rounded-lg bg-white object-cover group-hover:opacity-75"
+                autoPlay
+                loop
+                muted
                 src={videoUrl}
-                controls
                 style={{ aspectRatio: '16/9' }} // Adjust aspect ratio to match original dimensions
               />
-              <h3 className="mt-6 text-sm text-gray-500">Augmented Video</h3>
-            </div>
+              <h3 className="mt-6 text-sm text-gray-500">Augmented Video Score: {score}</h3> {/* Update this line */}
+              </div>
           </div>
         </div>
       </div>

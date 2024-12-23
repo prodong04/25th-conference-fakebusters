@@ -54,6 +54,8 @@ const MainPage: React.FC = () => {
   };
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [score, setScore] = useState<string | null>(null);
+
 
   useEffect(() => {
     const postVideo = async () => {
@@ -90,12 +92,12 @@ const MainPage: React.FC = () => {
   return (
     <main className="flex flex-col items-center justify-center p-6">
       <h1 className="text-3xl font-bold mt-24 mb-4">Deepfake Detector</h1>
-      <FileUpload onFileUpload={handleFileUpload} setVideoUrl={setVideoUrl}/>
+      <FileUpload onFileUpload={handleFileUpload} setVideoUrl={setVideoUrl} setScore={setScore}/>
       <p className="mt-2 mb-64 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
       {originalVideoSrc && result !== null ? (
         <>
           <ProcessingPage originalVideoSrc={originalVideoSrc} roiVideos={roiVideos} />
-          {videoUrl && <AugmentedVideo videoUrl={videoUrl} />}
+          {videoUrl && <AugmentedVideo videoUrl={videoUrl} score={score} />}
         </>
       ) : null}
     </main>
