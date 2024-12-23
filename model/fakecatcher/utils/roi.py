@@ -35,14 +35,12 @@ class ROIProcessor:
               216, 212, 214, 192, 187, 50 , 123, 116, 143, 35]
     }
 
-
     ## ROI 색.
     COLORS = {
         "R": (0, 0, 255),
         "L": (255, 0, 0), 
         "M": (0, 255, 0)
     }
-
 
     ## ROI "M" 삼각형 인덱스.
     TRIANGLE_INDICES = np.array([
@@ -85,7 +83,6 @@ class ROIProcessor:
         [254, 449, 339], [339, 449, 448], [339, 448, 255], [255, 448, 261], [255, 261, 446],
         [446, 261, 265]], dtype=np.int32)
     
-
     ## ROI "M" 랜드마크 인덱스 직사각형 메쉬 전환용 좌표.
     INDEX_COORDS = {
         226 : [0  ,0  ], 35  : [0  ,12 ], 143 : [0  ,18 ], 116 : [0  ,24 ],
@@ -120,12 +117,42 @@ class ROIProcessor:
         261 : [126,12 ], 340 : [126,18 ], 448 : [120,12 ], 346 : [120,24 ],
         427 : [120,44 ], 449 : [114,12 ], 347 : [114,30 ], 425 : [114,40 ]}
 
-
     def __init__(self, video_path: str, config: dict):
         self.video_path = video_path
         self.model_path = config["model_path"]
         self.fps_standard = int(config["fps_standard"])
         self.seg_time_interval = int(config["seg_time_interval"])
+        self.frame_list = []
+        self.detection_result_list = []
+
+        BaseOptions = mp.tasks.BaseOptions
+        FaceLandmarker = mp.tasks.vision.FaceLandmarker
+        FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
+        VisionRunningMode = mp.tasks.vision.RunningMode
+        options = FaceLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=self.model_path),
+            running_mode=VisionRunningMode.VIDEO)
+        
+        with FaceLandmarker.create_from_options(options) as landmarker:
+            cap = cv2.VideoCapture(self.video_path)
+            self.fps_local = int(cap.get(cv2.CAP_PROP_FPS))
+            self.frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            frame_idx = 0
+
+            while cap.isOpened():
+                success, frame = cap.read()
+                if not success:
+                    break
+                
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+                timestep_ms= int((frame_idx / self.fps_local) * 1000)
+                detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
+                self.frame_list.append(frame)
+                self.detection_result_list.append(detection_result)
+                frame_idx += 1
+            cap.release()
+            cv2.destroyAllWindows()
 
     def map(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> np.ndarray:
         """
@@ -202,7 +229,6 @@ class ROIProcessor:
             destin_frame[dy1:dy2, dx1:dx2] = destin_frame[dy1:dy2, dx1:dx2] + warped_frame
         return destin_frame
 
-
     def draw(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> np.ndarray:
         """
         단일 프레임 시각화.
@@ -237,7 +263,6 @@ class ROIProcessor:
             polygon_points = np.array([landmark_points[i] for i in indices], dtype=np.int32)
             cv2.polylines(annotated_frame, [polygon_points], isClosed=True, color=[220,220,220], thickness=1)
         return annotated_frame
-
 
     def calculate(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> list[np.ndarray]:
         """
@@ -279,7 +304,6 @@ class ROIProcessor:
         M_mean = get_mean_color(ROIProcessor.POLYGONS["M"])
         return R_mean, L_mean, M_mean
     
-
     def detect_with_map(self) -> np.ndarray:
         """
         Mediapipe의 FaceLandmark 모델로 검출한 얼굴 중심부 ROI를 삼각형 단위로 나눈다.
@@ -287,60 +311,26 @@ class ROIProcessor:
 
         Returns:
             transformed_frames: 직사각형 이미지 리스트.
-        """
-        ## mediapipe 설정.
-        BaseOptions = mp.tasks.BaseOptions
-        FaceLandmarker = mp.tasks.vision.FaceLandmarker
-        FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
-        VisionRunningMode = mp.tasks.vision.RunningMode
-        options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=self.model_path),
-            running_mode=VisionRunningMode.VIDEO)
-        
+        """        
         ## 아핀 변환 적용한 프레임 이미지 저장할 리스트.
         transformed_frames = []
 
-        ## 랜드마크 검출 모델 불러오기.
-        with FaceLandmarker.create_from_options(options) as landmarker:
-            cap = cv2.VideoCapture(self.video_path)
-            fps_local = int(cap.get(cv2.CAP_PROP_FPS))
-            total_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            frame_idx = 0
+        with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
+            for frame, detection_result in zip(self.frame_list, self.detection_result_list):
+                transformed_frames.append(self.map(frame, detection_result))
+                pbar.update(1)
 
-            ## tqdm 진행도 설정.
-            with tqdm(total=total_frame_count, desc="Processing Frames", unit="frame") as pbar:
+        transformed_frames = np.array(transformed_frames)
+        segment_size = int(self.fps_local * self.seg_time_interval)
+        padding_size = (segment_size - (self.frame_count % segment_size)) % segment_size
+        segment_num = int((self.frame_count + padding_size) / segment_size)
 
-                ## 프레임 단위 루프 진행.
-                while cap.isOpened():
-                    success, frame = cap.read()
-                    if not success:
-                        break
-                    
-                    ## 랜드마크 검출.
-                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-                    timestep_ms= int((frame_idx / fps_local) * 1000)
-                    detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
-                    ## 프레임 이미지에 그림 그리기.
-                    transformed_frames.append(self.map(frame, detection_result))
-                    frame_idx += 1
-                    pbar.update(1)
+        if padding_size > 0:
+            transformed_frames = np.pad(transformed_frames,((0, padding_size),(0, 0),(0, 0),(0, 0)), mode='constant', constant_values=0)
 
-            transformed_frames = np.array(transformed_frames)
-            segment_size = int(fps_local * self.seg_time_interval)
-            padding_size = (segment_size - (total_frame_count % segment_size)) % segment_size
-            segment_num = int((total_frame_count + padding_size) / segment_size)
-
-            if padding_size > 0:
-                transformed_frames = np.pad(transformed_frames, ((0, padding_size),(0, 0),(0, 0),(0, 0)), mode='constant', constant_values=0)
-
-            transformed_frames = transformed_frames.reshape(segment_num, segment_size, 600, 1320, 3)
-            transformed_frames = transformed_frames[:-1, :, :, :, :]
-
-            ## 리소스 릴리즈.
-            cap.release()
-            cv2.destroyAllWindows()
-        return transformed_frames, fps_local
-
+        transformed_frames = transformed_frames.reshape(segment_num, segment_size, 600, 1320, 3)
+        transformed_frames = transformed_frames[:-1, :, :, :, :]
+        return transformed_frames, self.fps_local
 
     def detect_with_draw(self, output_path: str) -> None:
         """
@@ -351,51 +341,16 @@ class ROIProcessor:
         모델이 도출하는 랜드마크는 사람의 얼굴에 들로네 삼각변환을 적용한 형태이고, 이중 얼굴 중심부에 포함되는 삼각형들도 시각화한다.
         최종 결과물을 동영상으로 합쳐서 저장한다.
         """
-        ## mediapipe 설정.
-        BaseOptions = mp.tasks.BaseOptions
-        FaceLandmarker = mp.tasks.vision.FaceLandmarker
-        FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
-        VisionRunningMode = mp.tasks.vision.RunningMode
-        options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=self.model_path),
-            running_mode=VisionRunningMode.VIDEO)
-        
+
         ## 랜드마크 경계 및 삼각형 표시된 프레임 담을 리스트.
         annotated_frames = []
 
-        ## 랜드마크 검출 모델 불러오기.
-        with FaceLandmarker.create_from_options(options) as landmarker:
-            cap = cv2.VideoCapture(self.video_path)
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            frame_idx = 0
-
-            ## tqdm 진행도 설정.
-            with tqdm(total=total_frames, desc="Processing Frames", unit="frame") as pbar:
-
-                ## 프레임 단위 루프 진행.
-                while cap.isOpened():
-                    success, frame = cap.read()
-                    if not success:
-                        break
-                    
-                    ## 랜드마크 검출.
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-                    timestep_ms= int((frame_idx / fps) * 1000)
-                    detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
-                    ## 프레임 이미지에 그림 그리기.
-                    annotated_frames.append(self.draw(frame, detection_result))                
-                    frame_idx += 1
-                    pbar.update(1)
-            
-            ## 결과 시각화 비디오 저장.
-            skvideo.io.vwrite(output_path, annotated_frames, inputdict={'-r': str(fps)})
-
-            ## 리소스 릴리즈.
-            cap.release()
-            cv2.destroyAllWindows()
-
+        ## tqdm 진행도 설정.
+        with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
+            for frame, detection_result in zip(self.frame_list, self.detection_result_list):
+                annotated_frames.append(self.draw(frame, detection_result))                
+                pbar.update(1)
+        skvideo.io.vwrite(output_path, annotated_frames, inputdict={'-r': str(self.fps)})
 
     def detect_with_calculate(self) -> list[dict]:
         """
@@ -422,72 +377,38 @@ class ROIProcessor:
                         current_row[~mask])
             return array
 
-        ## mediapipe 설정.
-        BaseOptions = mp.tasks.BaseOptions
-        FaceLandmarker = mp.tasks.vision.FaceLandmarker
-        FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
-        VisionRunningMode = mp.tasks.vision.RunningMode
-        options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=self.model_path),
-            running_mode=VisionRunningMode.VIDEO)
-        
         ## ROI별 RGB 평균값 담을 리스트.
         R_means_list = []
         L_means_list = []
         M_means_list = []
         
-        ## 랜드마크 검출 모델 불러오기.
-        with FaceLandmarker.create_from_options(options) as landmarker:
-            cap = cv2.VideoCapture(self.video_path)
-            fps_local = int(cap.get(cv2.CAP_PROP_FPS))
-            total_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            frame_idx = 0
+        with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
+            for frame, detection_result in zip(self.frame_list, self.detection_result_list):
+                R_mean, L_mean, M_mean = self.calculate(frame, detection_result)
+                R_means_list.append(R_mean)
+                L_means_list.append(L_mean)
+                M_means_list.append(M_mean)
+                pbar.update(1)
 
-            ## tqdm 진행도 설정.
-            with tqdm(total=total_frame_count, desc="Processing Frames", unit="frame") as pbar:
+        ## RGB 리스트 결측치 선형 보간.
+        R_means_array = interpolate(np.array(R_means_list).T)
+        L_means_array = interpolate(np.array(L_means_list).T)
+        M_means_array = interpolate(np.array(M_means_list).T)
 
-                ## 프레임 단위 루프 진행.
-                while cap.isOpened():
-                    success, frame = cap.read()
-                    if not success:
-                        break
-                    
-                    ## 랜드마크 검출.
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-                    timestep_ms= int((frame_idx / fps_local) * 1000)
-                    detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
-                    ## 프레임 RGB 평균값 구하기.
-                    R_mean, L_mean, M_mean = self.calculate(frame, detection_result)
-                    R_means_list.append(R_mean)
-                    L_means_list.append(L_mean)
-                    M_means_list.append(M_mean)
-                    frame_idx += 1
-                    pbar.update(1)
+        segment_size = int(self.fps_local * self.seg_time_interval)
+        padding_size = (segment_size - (self.frame_count % segment_size)) % segment_size
+        segment_num = int((self.frame_count + padding_size) / segment_size)
+        
+        if padding_size > 0:
+            R_means_array = np.pad(R_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
+            L_means_array = np.pad(L_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
+            M_means_array = np.pad(M_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
 
-            ## RGB 리스트 결측치 선형 보간.
-            R_means_array = interpolate(np.array(R_means_list).T)
-            L_means_array = interpolate(np.array(L_means_list).T)
-            M_means_array = interpolate(np.array(M_means_list).T)
+        R_means_array = R_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
+        L_means_array = L_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
+        M_means_array = M_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
 
-            segment_size = int(fps_local * self.seg_time_interval)
-            padding_size = (segment_size - (total_frame_count % segment_size)) % segment_size
-            segment_num = int((total_frame_count + padding_size) / segment_size)
-          
-            if padding_size > 0:
-                R_means_array = np.pad(R_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
-                L_means_array = np.pad(L_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
-                M_means_array = np.pad(M_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
-
-            R_means_array = R_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
-            L_means_array = L_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
-            M_means_array = M_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
-
-            R_means_array = R_means_array[:-1, :, :]
-            L_means_array = L_means_array[:-1, :, :]
-            M_means_array = M_means_array[:-1, :, :]
-
-            ## 리소스 릴리즈.
-            cap.release()
-            cv2.destroyAllWindows()
-        return R_means_array, L_means_array, M_means_array, fps_local
+        R_means_array = R_means_array[:-1, :, :]
+        L_means_array = L_means_array[:-1, :, :]
+        M_means_array = M_means_array[:-1, :, :]
+        return R_means_array, L_means_array, M_means_array, self.fps_local
