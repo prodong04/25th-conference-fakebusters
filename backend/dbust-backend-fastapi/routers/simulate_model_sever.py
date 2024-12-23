@@ -69,8 +69,12 @@ async def roi_model(file: UploadFile = File(...)):
             response = await client.post(model_server_url, files={"file": video_file})
             response.raise_for_status()
             
-            score = response.headers["score"]
-            return StreamingResponse(content=response.iter_bytes(), headers={"score": score})
+            headers = {
+                "File-Path": file_path,
+                "Score": f"{response.headers["score"]}",
+                "Access-Control-Expose-Headers": "File-Path, Score"
+            }
+            return StreamingResponse(content=response.iter_bytes(), headers=headers)
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from model server: {e.response.text}")
@@ -98,12 +102,17 @@ async def model(file: UploadFile = File(...)):
             response.raise_for_status()
             
             video_data = response.content
-            score = response.headers["X-Inference-Result"]
+            
+            headers = {
+                "File-Path": file_path,
+                "Score": f"{response.headers["X-Inference-Result"]}",
+                "Access-Control-Expose-Headers": "File-Path, Score"
+            }
             
             def video_iterator(data):
                 yield data
                 
-            return StreamingResponse(video_iterator(video_data), headers={"score": score})
+            return StreamingResponse(video_iterator(video_data), headers=headers)
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from model server: {e.response.text}")
