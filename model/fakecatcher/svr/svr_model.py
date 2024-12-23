@@ -60,7 +60,7 @@ class SVRModel:
         joblib.dump(self.model, model_path)
         print(f"Model saved to {model_path}")
     
-    def load_model(self, model_path, scaler_path):
+    def load_model(self, model_path):
         """저장된 모델과 스케일러를 로드합니다."""
         self.model = joblib.load(model_path)
         print(f"Model loaded from {model_path}")
