@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException, File, UploadFile
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 import random 
 import httpx
 import os, shutil
 import numpy as np
 import json
-import subprocess
 
 router = APIRouter(
     prefix="/api/models",
@@ -70,12 +69,15 @@ async def roi_model(file: UploadFile = File(...)):
             response = await client.post(model_server_url, files={"file": video_file})
             response.raise_for_status()
             
-            score = response.headers["score"]
-            return StreamingResponse(content=response.iter_bytes(), headers={"Score": score, "Access-Control-Expose-Headers": "Score"})
+            headers = {
+                "File-Path": file_path,
+                "Score": f"{response.headers["score"]}",
+                "Access-Control-Expose-Headers": "File-Path, Score"
+            }
+            return StreamingResponse(content=response.iter_bytes(), headers=headers)
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from model server: {e.response.text}")
-
 
 @router.post("/mmnet")
 async def model(file: UploadFile = File(...)):
@@ -100,19 +102,23 @@ async def model(file: UploadFile = File(...)):
             response.raise_for_status()
             
             video_data = response.content
-            score = response.headers["X-Inference-Result"]
+            
+            headers = {
+                "File-Path": file_path,
+                "Score": f"{response.headers["X-Inference-Result"]}",
+                "Access-Control-Expose-Headers": "File-Path, Score"
+            }
             
             def video_iterator(data):
                 yield data
                 
-            return StreamingResponse(video_iterator(video_data), headers={"Score": score, "Access-Control-Expose-Headers": "Score"})
+            return StreamingResponse(video_iterator(video_data), headers=headers)
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from model server: {e.response.text}")
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-  
     
 @router.post("/ppg")
 async def face_roi_model(file: UploadFile = File(...)):

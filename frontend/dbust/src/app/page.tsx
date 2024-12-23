@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import FileUpload from '../components/FileUpload';
 import ProcessingPage from './ProcessingPage';
 import AugmentedVideo from './AugmentedVideo';
+import LipVideo from './LipVideo';
 
 
 function simulateLongProcess(file: File): Promise<boolean> {
@@ -53,8 +54,10 @@ const MainPage: React.FC = () => {
     nose: '/data/002/002_nose_roi.mp4',
   };
 
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [score, setScore] = useState<string | null>(null);
+  const [lipVideoUrl, lipSetVideoUrl] = useState<string | null>(null);
+  const [lipScore, lipSetScore] = useState<string | null>(null);
+  const [mmnetVideoUrl, mmnetSetVideoUrl] = useState<string | null>(null);
+  const [mmnetScore, mmnetSetScore] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -79,7 +82,7 @@ const MainPage: React.FC = () => {
 
       const videoBlob = await response.blob();
       const videoUrl = URL.createObjectURL(videoBlob);
-      setVideoUrl(videoUrl);
+      mmnetSetVideoUrl(videoUrl);
     } catch (error) {
       console.error('Error posting video:', error);
     }
@@ -92,12 +95,14 @@ const MainPage: React.FC = () => {
   return (
     <main className="flex flex-col items-center justify-center p-6">
       <h1 className="text-3xl font-bold mt-24 mb-4">Deepfake Detector</h1>
-      <FileUpload onFileUpload={handleFileUpload} setVideoUrl={setVideoUrl} setScore={setScore}/>
+      <FileUpload onFileUpload={handleFileUpload} lipSetVideoUrl={lipSetVideoUrl} lipSetScore={lipSetScore} mmnetSetScore={mmnetSetScore} mmnetSetVideoUrl={mmnetSetVideoUrl}
+       />
       <p className="mt-2 mb-64 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
       {originalVideoSrc && result !== null ? (
         <>
           <ProcessingPage originalVideoSrc={originalVideoSrc} roiVideos={roiVideos} />
-          {videoUrl && <AugmentedVideo videoUrl={videoUrl} score={score} />}
+          {mmnetVideoUrl && <AugmentedVideo videoUrl={mmnetVideoUrl} score={mmnetScore} />}
+          {lipVideoUrl && <LipVideo videoUrl={lipVideoUrl} score={lipScore} />}
         </>
       ) : null}
     </main>
