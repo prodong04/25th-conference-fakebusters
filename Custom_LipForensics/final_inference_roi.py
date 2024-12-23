@@ -4,9 +4,9 @@ import yaml
 import numpy as np
 
 import sys
-sys.path.insert(0, "/root/Custom_LipForensics/LipForensics")
+sys.path.insert(0, "/root/25th-conference-fakebusters/Custom_LipForensics/LipForensics")
 from inference import evaluate_lipforensics
-sys.path.insert(0, "/root/25th-conference-fakebusters/model/roi_extractor/utils")
+sys.path.insert(0, "/root/25th-conference-fakebusters/Custom_LipForensics/roi_extractor/utils")
 from preprocess import VideoROIExtractor
 
 
