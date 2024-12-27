@@ -300,7 +300,6 @@ class PPG_G:
         """
         window_size = int(self.fps * win_sec)
         step_size = int(self.fps * step_sec)
-
         filtered_G_trace = self.filter_G_trace(self.raw_G_trace)
         rc_array = self.SSA(filtered_G_trace, window_size)
         rc_trace = self.RC_selection(rc_array, tolerance=0.2)
