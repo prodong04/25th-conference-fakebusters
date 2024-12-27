@@ -16,7 +16,7 @@ def load_data(root_dir, csv_path: str) -> Tuple[List[str]]:
     data = pd.read_csv(csv_path)
 
     # 비디오 경로 생성
-    video_paths = data.apply(lambda row: os.path.join(root_dir, row['vid'], row['path']), axis=1).tolist()
+    video_paths = data.apply(lambda row: os.path.join(root_dir, row['path'], row['file_name']), axis=1).tolist()
     labels = data['type'].apply(lambda x: 1 if x.split('-')[0] == 'RealVideo' else 0).tolist()
 
     return video_paths, labels
