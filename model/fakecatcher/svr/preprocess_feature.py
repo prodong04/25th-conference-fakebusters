@@ -13,6 +13,29 @@ from utils.logging import setup_logging
 from ppg.interpolate import frequency_resample
 from feature.feature_extractor import FeatureExtractor
 
+"""
+import yaml
+from ppg_c import PPG_C
+from utils.roi import ROIProcessor
+
+if __name__ == "__main__":
+
+    with open("/Users/treecollector/Desktop/test/model/fakecatcher/utils/config.yaml", 'r', encoding='utf-8') as file:
+        config = yaml.safe_load(file)
+
+    roi = ROIProcessor(video_path="/Users/treecollector/Desktop/test/model/fakecatcher/ppg/short.mp4", config=config)
+    R_means_array, L_means_array, M_means_array, fps = roi.detect_with_calculate()
+
+    for i in range(R_means_array.shape[0]):
+        G_R = PPG_G(R_means_array[i], fps).compute_signal()
+        G_L = PPG_G(L_means_array[i], fps).compute_signal()
+        G_M = PPG_G(M_means_array[i], fps).compute_signal()
+        C_R = PPG_C(R_means_array[i], fps).compute_signal()
+        C_L = PPG_C(L_means_array[i], fps).compute_signal()
+        C_M = PPG_C(M_means_array[i], fps).compute_signal()
+        breakpoint()
+"""
+
 # Set up logging
 global logger
 logger = setup_logging()
