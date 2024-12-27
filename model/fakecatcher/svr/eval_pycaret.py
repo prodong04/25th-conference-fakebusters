@@ -1,16 +1,14 @@
 import yaml
-from tqdm import tqdm
-import argparse
 import joblib
+import argparse
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 from pycaret.classification import load_model, predict_model
-from utils.feature.feature_extractor import FeatureExtractor
 from utils.logging import setup_logging
-from preprocess import extract_feature
+from preprocess_feature import extract_feature
 
 # Set up logging
 global logger

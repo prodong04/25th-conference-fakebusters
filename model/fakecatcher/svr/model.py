@@ -1,8 +1,8 @@
+import joblib
 import numpy as np
 from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-import joblib
+from sklearn.model_selection import train_test_split
 
 class Model:
     def __init__(self, kernel='rbf', C=1.0):

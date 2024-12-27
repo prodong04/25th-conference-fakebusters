@@ -1,6 +1,6 @@
-from .basecnn import baseCNN
-from .resnet import ResNet34
-from .effinet import EfficientNetB3
+from basecnn import baseCNN
+from resnet import ResNet34
+from effinet import EfficientNetB3
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

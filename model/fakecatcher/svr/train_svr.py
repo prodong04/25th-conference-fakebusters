@@ -1,14 +1,8 @@
-import yaml
-from tqdm import tqdm
-import argparse
 import joblib
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
-
-from utils.feature.feature_extractor import FeatureExtractor
 from svr.model import Model
 from utils.logging import setup_logging
+from sklearn.model_selection import train_test_split
 
 def main():
     data = joblib.load('features_20241223_110602.pkl')

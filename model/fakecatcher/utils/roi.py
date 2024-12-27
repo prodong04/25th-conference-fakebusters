@@ -1,8 +1,7 @@
 import cv2
-import skvideo.io
 import numpy as np
-import mediapipe as mp
 from tqdm import tqdm
+import mediapipe as mp
 from typing import Tuple
 from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerResult
 
@@ -371,7 +370,7 @@ class ROIProcessor:
 
     def detect_with_calculate(self) -> Tuple[np.ndarray]:
         """
-        This method processes video frames by masking the regions outside the face center, left cheek, 
+        processes video frames by masking the regions outside the face center, left cheek, 
         and right cheek regions of interest (ROIs), leaving only the pixels inside the specified ROIs. 
         It then calculates the average pixel values for each RGB channel. Afterward, linear interpolation 
         is applied to handle any missing values, and the result is returned as a tuple of arrays.
