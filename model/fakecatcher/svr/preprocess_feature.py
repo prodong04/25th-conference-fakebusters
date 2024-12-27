@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from datetime import datetime
-from data.fakeavceleb import load_data
+from data.fakeforensics import load_fakeforensics_data
 
 from ppg.ppg_c import PPG_C
 from ppg.ppg_g import PPG_G
@@ -13,28 +13,6 @@ from utils.logging import setup_logging
 from ppg.interpolate import frequency_resample
 from feature.feature_extractor import FeatureExtractor
 
-"""
-import yaml
-from ppg_c import PPG_C
-from utils.roi import ROIProcessor
-
-if __name__ == "__main__":
-
-    with open("/Users/treecollector/Desktop/test/model/fakecatcher/utils/config.yaml", 'r', encoding='utf-8') as file:
-        config = yaml.safe_load(file)
-
-    roi = ROIProcessor(video_path="/Users/treecollector/Desktop/test/model/fakecatcher/ppg/short.mp4", config=config)
-    R_means_array, L_means_array, M_means_array, fps = roi.detect_with_calculate()
-
-    for i in range(R_means_array.shape[0]):
-        G_R = PPG_G(R_means_array[i], fps).compute_signal()
-        G_L = PPG_G(L_means_array[i], fps).compute_signal()
-        G_M = PPG_G(M_means_array[i], fps).compute_signal()
-        C_R = PPG_C(R_means_array[i], fps).compute_signal()
-        C_L = PPG_C(L_means_array[i], fps).compute_signal()
-        C_M = PPG_C(M_means_array[i], fps).compute_signal()
-        breakpoint()
-"""
 
 # Set up logging
 global logger
@@ -53,13 +31,13 @@ def extract_feature(video_path, config):
     target_fps = config['fps_standard']
 
     for i in range(R_means_array.shape[0]):
-        G_R = PPG_G.from_RGB(R_means_array[i], original_fps).compute_signal()
-        G_L = PPG_G.from_RGB(L_means_array[i], original_fps).compute_signal()
-        G_M = PPG_G.from_RGB(M_means_array[i], original_fps).compute_signal()
-        C_R = PPG_C.from_RGB(R_means_array[i], original_fps).compute_signal()
-        C_L = PPG_C.from_RGB(L_means_array[i], original_fps).compute_signal()
-        C_M = PPG_C.from_RGB(M_means_array[i], original_fps).compute_signal()
-
+        G_R = PPG_G(R_means_array[i], original_fps).compute_signal()
+        G_L = PPG_G(L_means_array[i], original_fps).compute_signal()
+        G_M = PPG_G(M_means_array[i], original_fps).compute_signal()
+        C_R = PPG_C(R_means_array[i], original_fps).compute_signal()
+        C_L = PPG_C(L_means_array[i], original_fps).compute_signal()
+        C_M = PPG_C(M_means_array[i], original_fps).compute_signal()
+        
         # Segment signals
         R_ROI_G_segments = frequency_resample(G_R, time_interval, original_fps, target_fps)
         R_ROI_C_segments = frequency_resample(C_R, time_interval, original_fps, target_fps)
@@ -96,7 +74,7 @@ def main():
     
     # Load data
     data_root_directory = config['data_root_directory']
-    video_paths, true_labels = load_data(data_root_directory, config["meta_data_csv_path"])
+    video_paths, true_labels = load_fakeforensics_data(config["meta_data_csv_path"])
     logger.info(f"Loaded {len(video_paths)} videos.")
 
     # Extract features
