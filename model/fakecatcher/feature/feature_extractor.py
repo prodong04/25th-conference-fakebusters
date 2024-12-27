@@ -7,19 +7,19 @@ from .signal_transformation import *
 
 class FeatureExtractor:
     """
-    """
+    """[[                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ]]
     def __init__(self, fps, *args):
         """
         params:
         signals: np.ndarray, order: [G_L, G_M, G_R, C_L, C_M, C_R]
         """
         self.fps = fps
-        self.G_L_o, self.G_M_o, self.G_R_o, self.C_L_o, self.C_M_o, self.C_R_o = args
+        self.G_L, self.G_M, self.G_R, self.C_L, self.C_M, self.C_R = args
 
-        self.S = self.prepare_S(self.G_L_o, self.G_R_o, self.G_M_o, self.C_L_o, self.C_R_o, self.C_M_o)
-        self.S_C = self.prepare_S_C(self.C_L_o, self.C_R_o, self.C_M_o)
-        self.D = self.prepare_D(self.C_L_o, self.G_L_o, self.C_R_o, self.G_R_o, self.C_M_o, self.G_M_o)
-        self.D_C = self.prepare_D_C(self.C_L_o, self.C_M_o, self.C_R_o)
+        self.S = self.prepare_S(self.G_L, self.G_R, self.G_M, self.C_L, self.C_R, self.C_M)
+        self.S_C = self.prepare_S_C(self.C_L, self.C_R, self.C_M)
+        self.D = self.prepare_D(self.C_L, self.G_L, self.C_R, self.G_R, self.C_M, self.G_M)
+        self.D_C = self.prepare_D_C(self.C_L, self.C_M, self.C_R)
 
     def prepare_S(self, G_L, G_R, G_M, C_L, C_R, C_M):
         return np.vstack([G_L, G_R, G_M, C_L, C_R, C_M])
@@ -159,7 +159,7 @@ class FeatureExtractor:
         
         features = np.vstack([std, sdann, rmssd, sdnni, sdsd, mean_autocorrelations, sh_entropy])
 
-        assert not np.any(np.isinf(features)), "nan이 존재함함"
+        assert not np.any(np.isinf(features)), "nan이 존재함"
         return features    
 
 import json

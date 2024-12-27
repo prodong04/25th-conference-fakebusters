@@ -44,7 +44,7 @@ def get_video_files(base_dir, csv_path):
 
     print(f"CSV 파일이 저장되었습니다: {csv_path}")
 
-def load_fakeforensics_data(root_dir: str, csv_path: str):
+def load_fakeforensics_data(csv_path: str):
     data = pd.read_csv(csv_path)
     video_paths = data['video_path']
     labels = data['label']
