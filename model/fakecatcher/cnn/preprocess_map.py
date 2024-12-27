@@ -1,12 +1,9 @@
-import os
-import csv
 import yaml
 import logging
 import argparse
-import numpy as np
 from tqdm import tqdm
 from utils.roi import ROIProcessor
-from utils.ppg.ppg_map import PPG_MAP
+from ppg.ppg_map import PPG_MAP
 from data.fakeavceleb import load_data
 import json
 

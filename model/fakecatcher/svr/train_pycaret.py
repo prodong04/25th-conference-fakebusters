@@ -1,38 +1,11 @@
-import yaml
-from tqdm import tqdm
-import argparse
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler  # 정규화 도구 추가
-
-from utils.feature.feature_extractor import FeatureExtractor
-from svr.model import Model
-from utils.logging import setup_logging
-
-from sklearn.decomposition import PCA
-import numpy as np
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from pycaret.classification import *
-import joblib
-import numpy as np
-from sklearn.preprocessing import StandardScaler  # 정규화 도구 추가
-import pandas as pd
-from sklearn.decomposition import PCA
-
-
-import numpy as np
-import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-
-from pycaret.classification import save_model
-
+from utils.logging import setup_logging
 
 def perform_pca(data, n_components=None):
     """

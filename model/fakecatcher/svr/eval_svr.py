@@ -1,16 +1,12 @@
 import yaml
-from tqdm import tqdm
-import argparse
 import joblib
+import argparse
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
-
-from data.fakeavceleb import load_data
-from utils.feature.feature_extractor import FeatureExtractor
+from tqdm import tqdm
 from svr.model import Model
+from data.fakeavceleb import load_data
 from utils.logging import setup_logging
-from preprocess import extract_feature
+from preprocess_feature import extract_feature
 
 # Set up logging
 global logger
