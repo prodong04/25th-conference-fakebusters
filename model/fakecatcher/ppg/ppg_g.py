@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from scipy.signal import butter, filtfilt
 from scipy.fft import fft, fftfreq
@@ -9,25 +10,13 @@ class PPG_G:
     IEEE Conference on Computer Vision and Pattern Recognition (CVPR)
     Workshops, June 2018.
     """
-    def __init__(self, RGB_mean_dict: dict, fps: int):
+    def __init__(self, RGB_mean_array: np.ndarray, fps: int):
         """
         ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
         """
-        self.RGB_mean_dict = RGB_mean_dict
+        self.raw_G_trace = RGB_mean_array[:,1]
         self.fps = fps
-        self.trace = None
-        self.extract_G_trace()
 
-    @classmethod
-    def from_RGB(cls, trace: np.ndarray, fps: float):
-        """
-        생성자 오버로딩 느낌
-        """
-        obj = cls.__new__(cls)
-        obj.RGB_mean_dict = None
-        obj.fps = fps
-        obj.trace = trace[:,1]
-        return obj
     ## ====================================================================
     ## ============================== Utils ===============================
     ## ====================================================================
@@ -95,16 +84,6 @@ class PPG_G:
     ## ====================================================================
     ## ================ Single-channel Band Pass Filtering ================
     ## ====================================================================
-
-    def extract_G_trace(self) -> np.ndarray:
-        """
-        ROI 영상 G채널의 프레임 별 평균값 배열 반환.
-
-        Returns:
-            raw_G_trace: ROI 영상 G채널의 프레임 별 평균값을 저장한 넘파이 배열. [F]
-        """
-        raw_G_trace = self.RGB_mean_dict["G"]
-        self.raw_G_trace = raw_G_trace
 
     def filter_G_trace(self, raw_G_trace: np.ndarray) -> np.ndarray:
         """
@@ -312,20 +291,20 @@ class PPG_G:
     ## ============================ Execution =============================
     ## ====================================================================
 
-    def compute_signal(self) -> np.ndarray:
+    def compute_signal(self, win_sec=1.6, step_sec=0.7) -> np.ndarray:
         """
         엑조디아.
 
         Returns:
             pulse_signal: PPG-G 시그널.
         """
-        window_size = int(self.fps * 1.6)
-        step_size = int(self.fps * 0.8)
-        filtered_G_trace = self.filter_G_trace(self.trace)
+        window_size = int(self.fps * win_sec)
+        step_size = int(self.fps * step_sec)
+
+        filtered_G_trace = self.filter_G_trace(self.raw_G_trace)
         rc_array = self.SSA(filtered_G_trace, window_size)
         rc_trace = self.RC_selection(rc_array, tolerance=0.2)
         preliminary = self.overlap_add(rc_trace, window_size, step_size)
-        f_r = self.instantaeous_HR(preliminary, window_size, step_size)
+        f_r = self.instantaeous_HR(preliminary, window_size, window_size//10)
         pulse_signal = self.spectral_mask(rc_array, f_r, window_size, step_size)
         return pulse_signal
-        

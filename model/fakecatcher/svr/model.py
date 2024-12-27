@@ -62,26 +62,3 @@ class Model:
         """Load a saved model from a file."""
         self.model = joblib.load(model_path)
         print(f"Model loaded from {model_path}")
-
-if __name__ == "__main__":
-    # Example usage
-    # Generate synthetic data
-    np.random.seed(42)
-    X = np.random.rand(100, 2) * 10  # 2D features for classification
-    y = np.random.choice([0, 1], size=100)  # Binary classification
-
-    # Initialize the SVM model
-    svm_model = Model(kernel='rbf', C=1.0)
-
-    # Split data into train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train the model
-    svm_model.train(X_train, y_train)
-
-    # Predict on test data
-    y_pred = svm_model.predict(X_test)
-
-    # Evaluate the model
-    accuracy = svm_model.evaluate(y_test, y_pred)
-    print(f"Accuracy: {accuracy:.2f}")

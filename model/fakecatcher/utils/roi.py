@@ -395,25 +395,24 @@ class ROIProcessor:
             return array
 
         # Lists to store the average RGB values for each region of interest (ROI)
-        R_means_list = []
-        L_means_list = []
-        M_means_list = []
+        R_means_array = np.zeros(shape=(self.frame_count, 3))
+        L_means_array = np.zeros(shape=(self.frame_count, 3))
+        M_means_array = np.zeros(shape=(self.frame_count, 3))
 
         # Process each frame and calculate the average RGB values for the ROIs
         with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
-            for frame, detection_result in zip(self.frame_list, self.detection_result_list):
-                # Calculate the mean RGB values for the current frame and detection result
+            for index, (frame, detection_result) in enumerate(zip(self.frame_list, self.detection_result_list)):
                 R_mean, L_mean, M_mean = self.calculate(frame, detection_result)
                 # Append the results to the respective lists
-                R_means_list.append(R_mean)
-                L_means_list.append(L_mean)
-                M_means_list.append(M_mean)
-                pbar.update(1)  # Update the progress bar
+                R_means_array[index] = R_mean
+                L_means_array[index] = L_mean
+                M_means_array[index] = M_mean
+                pbar.update(1)
 
         # Perform linear interpolation to fill in any missing values for the RGB lists
-        R_means_array = interpolate(np.array(R_means_list).T)
-        L_means_array = interpolate(np.array(L_means_list).T)
-        M_means_array = interpolate(np.array(M_means_list).T)
+        R_means_array = interpolate(R_means_array.T)
+        L_means_array = interpolate(L_means_array.T)
+        M_means_array = interpolate(M_means_array.T)
 
         # Calculate the segment size and padding required to align the data
         segment_size = int(self.fps_local * self.seg_time_interval)
