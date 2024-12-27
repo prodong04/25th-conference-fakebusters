@@ -1,9 +1,9 @@
 import cv2
-import yaml
 import skvideo.io
 import numpy as np
 import mediapipe as mp
 from tqdm import tqdm
+from typing import Tuple
 from mediapipe.tasks.python.vision.face_landmarker import FaceLandmarkerResult
 
 class ROIProcessor:
@@ -11,19 +11,19 @@ class ROIProcessor:
     EXAMPLE USAGE
 
     Initialization:
-        roi = ROIProcessor(video_path, model_path)
+        roi = ROIProcessor(video_path: str, config: dict)
 
     Visualization:
-        roi.detect_with_draw("OUTPUT_PATH")
+        annotated_frames, fps = roi.detect_with_draw()
 
     RGB Averaging:
-        R_means_dict, L_means_dict, M_means_dict = roi.detect_with_calculate()
+        R_means_aray, L_means_aray, M_means_aray, fps = roi.detect_with_calculate()
 
     Affine Transformation:
-        transformed_frames = roi.detect_with_map()
+        transformed_frames, fps = roi.detect_with_map()
     """
 
-    ## ROI 랜드마크 인덱스.
+    ## ROI Landmark Index
     POLYGONS = {
         "R": [139, 100, 203, 135],
         "L": [368, 329, 423, 364],
@@ -35,14 +35,14 @@ class ROIProcessor:
               216, 212, 214, 192, 187, 50 , 123, 116, 143, 35]
     }
 
-    ## ROI 색.
+    ## ROI Color
     COLORS = {
         "R": (0, 0, 255),
         "L": (255, 0, 0), 
         "M": (0, 255, 0)
     }
 
-    ## ROI "M" 삼각형 인덱스.
+    ## ROI "M": Triangle Indices
     TRIANGLE_INDICES = np.array([
         [214, 212, 216], [214, 216, 207], [192, 214, 207], [187, 192, 207], [187, 207, 205],
         [50 , 187, 205], [50 , 205, 101], [50 , 101, 118], [50 , 118, 117], [123, 50 , 117],
@@ -83,7 +83,7 @@ class ROIProcessor:
         [254, 449, 339], [339, 449, 448], [339, 448, 255], [255, 448, 261], [255, 261, 446],
         [446, 261, 265]], dtype=np.int32)
     
-    ## ROI "M" 랜드마크 인덱스 직사각형 메쉬 전환용 좌표.
+    ## ROI "M": Coordinates on the Rectangle Mesh that Correspond to Landmark Indices
     INDEX_COORDS = {
         226 : [0  ,0  ], 35  : [0  ,12 ], 143 : [0  ,18 ], 116 : [0  ,24 ],
         123 : [0  ,30 ], 50  : [0  ,36 ], 187 : [0  ,42 ], 192 : [0  ,48 ],
@@ -117,14 +117,24 @@ class ROIProcessor:
         261 : [126,12 ], 340 : [126,18 ], 448 : [120,12 ], 346 : [120,24 ],
         427 : [120,44 ], 449 : [114,12 ], 347 : [114,30 ], 425 : [114,40 ]}
 
-    def __init__(self, video_path: str, config: dict):
+    def __init__(self, video_path: str, config: dict) -> None:
+        """
+        Initializes ROIProcessor object, conducts landmark detection on input video upon initialization.
+
+        Args:
+            video_path: input video path
+            config: configuration dictionary.
+        """
         self.video_path = video_path
         self.model_path = config["model_path"]
         self.fps_standard = int(config["fps_standard"])
         self.seg_time_interval = int(config["seg_time_interval"])
-        self.frame_list = []
         self.detection_result_list = []
+        self.frame_list = []
+        self.height = 0
+        self.width = 0
 
+        ## Set options for MediaPipe facelandmark detector
         BaseOptions = mp.tasks.BaseOptions
         FaceLandmarker = mp.tasks.vision.FaceLandmarker
         FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
@@ -133,8 +143,11 @@ class ROIProcessor:
             base_options=BaseOptions(model_asset_path=self.model_path),
             running_mode=VisionRunningMode.VIDEO)
         
+        ## Loop through video frames for landmark detection
         with FaceLandmarker.create_from_options(options) as landmarker:
             cap = cv2.VideoCapture(self.video_path)
+            ## We take the fps of the input video as "local" fps.
+            ## We later interpolate this to fit 30 fps for ppg map.
             self.fps_local = int(cap.get(cv2.CAP_PROP_FPS))
             self.frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frame_idx = 0
@@ -144,271 +157,285 @@ class ROIProcessor:
                 if not success:
                     break
                 
+                ## Change frame color from BGR to RGB for later visualization.
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                ## Convert frame image into designated input type for MediaPipe model.
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
                 timestep_ms= int((frame_idx / self.fps_local) * 1000)
                 detection_result = landmarker.detect_for_video(mp_image, timestep_ms)
-                self.frame_list.append(frame)
+                ## Append detection result and original frame image onto respective lists.
                 self.detection_result_list.append(detection_result)
+                self.frame_list.append(frame)
                 frame_idx += 1
+
+            ## Release resources.
             cap.release()
             cv2.destroyAllWindows()
 
     def map(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> np.ndarray:
         """
-        단일 프레임 아핀 변환.
+        Perform affine transformation on a single frame.
 
         Args:
-            frame: 비디오 프레임 이미지.
-            detection_result: frame에 대한 모델 추론 결과.
+            frame: Video frame image.
+            detection_result: Model inference result for the frame.
 
         Returns:
-            destin_frame: ROI "M" 내부의 삼각 랜드마크를 직사각형으로 펼쳐놓은 이미지.
+            destin_frame: Image with triangular landmarks inside the ROI "M" unwrapped into rectangles.
         """
-        ## 주어진 프레임에 얼굴이 잡히지 않은 경우 비어있는 이미지 반환.
+        ## Return an empty image if no face is detected in the given frame.
         try:
             face_landmark = detection_result.face_landmarks[0]
-        except Exception:
+        except IndexError:
             return np.zeros((600, 1320, 3), dtype=np.float32)
 
-        ## 프레임 복사본 생성하고 길이, 너비 확인.
+        ## Denormalize the coordinates of landmarks using the frame's height and width.
         origin_frame = np.copy(frame)
-        height, width, _ = frame.shape
+        self.height, self.width, _ = frame.shape
+        landmark_points = [
+            [int(landmark.x * self.width), int(landmark.y * self.height)]
+            for landmark in face_landmark
+        ]
 
-        ## 랜드마크 내부의 정규화되어 있는 좌표들을 프레임 길이, 너비를 사용해 원본으로 복구.
-        landmark_points = [[int(landmark.x * width), int(landmark.y * height)] for landmark in face_landmark]
-
-        ## 랜드마크 옮겨줄 타겟 이미지 생성.
+        ## Create a target image for relocating the landmarks.
         destin_frame = np.zeros((600, 1320, 3), dtype=np.float32)
 
-        ## 원본 이미지 내부 삼각 랜드마크를 직사각형 내부에 배정된 칸으로 아핀 변환을 적용해 끼워맞춘다.
+        ## Apply affine transformation to fit triangular landmarks from the original image into assigned rectangles in the target image.
         for triangle_index in ROIProcessor.TRIANGLE_INDICES:
-            ## 원본 이미지의 삼각 랜드마크 좌표.
+            ## Coordinates of triangular landmarks in the original image.
             origin_coords = np.array([landmark_points[i] for i in triangle_index], dtype=np.float32)
-            ## 원본 이미지의 삼각 랜드마크 좌표에 대응하는 타겟 이미지의 삼각 랜드마크 좌표.
-            destin_coords = np.array([ROIProcessor.INDEX_COORDS[i] for i in triangle_index], dtype=np.float32)
-            ## 현재 최대 길이와 최대 너비가 60,132로 제한되어 있는 타겟 이미지 10배 스케일링.
-            destin_coords *= 10
+            ## Coordinates of triangular landmarks in the target image corresponding to the original coordinates.
+            destin_coords = np.array([ROIProcessor.INDEX_COORDS[i] for i in triangle_index], dtype=np.float32) * 10
 
-            ## 원본, 타겟 이미지의 삼각 랜드마크를 담을 바운딩 박스 좌표 계산. (x,y,w,h)
+            ## Calculate bounding box coordinates (x, y, w, h) for the triangular landmarks in the original and target images.
             origin_rect = cv2.boundingRect(origin_coords)
             destin_rect = cv2.boundingRect(destin_coords)
 
-            ## 바운딩 박스의 왼쪽 상단 코너 좌표값을 기준으로 삼각형 좌표 재정렬. 
-            origin_trig_cropped = []
-            destin_trig_cropped = []
-            for i in range(0, 3):
-                origin_trig_cropped.append(((origin_coords[i][0] - origin_rect[0]), (origin_coords[i][1] - origin_rect[1])))
-                destin_trig_cropped.append(((destin_coords[i][0] - destin_rect[0]), (destin_coords[i][1] - destin_rect[1])))
-            
-            ## 원본 이미지를 바운딩 박스 크기로 자르기.
-            ox1 = origin_rect[0]
-            ox2 = origin_rect[0] + origin_rect[2]
-            oy1 = origin_rect[1]
-            oy2 = origin_rect[1] + origin_rect[3]
+            ## Re-align triangular coordinates relative to the top-left corner of the bounding box.
+            origin_trig_cropped = [(coord[0] - origin_rect[0], coord[1] - origin_rect[1]) for coord in origin_coords]
+            destin_trig_cropped = [(coord[0] - destin_rect[0], coord[1] - destin_rect[1]) for coord in destin_coords]
+
+            ## Crop the bounding box area from the original image.
+            ox1, oy1, ox2, oy2 = origin_rect[0], origin_rect[1], origin_rect[0] + origin_rect[2], origin_rect[1] + origin_rect[3]
             cropped_frame = origin_frame[oy1:oy2, ox1:ox2]
-            
-            ## 원본 이미지의 삼각 랜드마크로부터 타겟 이미지의 삼각 랜드마크로의 아핀 변환 행렬 계산.
+
+            ## Compute the affine transformation matrix to map triangular landmarks from the original to the target image.
             warpMat = cv2.getAffineTransform(np.float32(origin_trig_cropped), np.float32(destin_trig_cropped))
-            ## 원본 이미지로부터 잘라낸 바운딩 박스를 변환 행렬을 사용해 워프.
+            ## Warp the cropped bounding box from the original image using the affine transformation matrix.
             warped_frame = cv2.warpAffine(cropped_frame, warpMat, (destin_rect[2], destin_rect[3]), None, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT101)
-            ## 타겟 이미지 바운딩 박스 크기의 마스크 생성.
-            mask = np.zeros((destin_rect[3], destin_rect[2], 3), dtype = np.float32)
-            ## 타겟 삼각 랜드마크 내부의 픽셀값을 1로 조정.
+            ## Create a mask of the bounding box size in the target image.
+            mask = np.zeros((destin_rect[3], destin_rect[2], 3), dtype=np.float32)
+            ## Set the pixel values inside the triangular landmarks in the target mask to 1.
             cv2.fillConvexPoly(mask, np.int32(destin_trig_cropped), (1,1,1), 16, 0)
-            ## 변환한 바운딩 박스에 마스크를 적용.
+            ## Apply the mask to the warped bounding box.
             warped_frame = warped_frame * mask
 
-            ## 직사각형의 바운딩 박스 영역 가져와서 픽셀값 더해주기.
-            dx1 = destin_rect[0]
-            dy1 = destin_rect[1]
-            dx2 = destin_rect[0] + destin_rect[2]
-            dy2 = destin_rect[1] + destin_rect[3]
-            ## 아핀 변환을 적용하는 과정에서 결과값 차원이 미세하게 틀어질 수 있기 때문에 리사이징으로 다시 맞춰주기.
+            ## Add the pixel values to the corresponding bounding box area in the target image.
+            dx1, dy1, dx2, dy2 = destin_rect[0], destin_rect[1], destin_rect[0] + destin_rect[2], destin_rect[1] + destin_rect[3]
+            ## Resize to align dimensions, as slight mismatches may occur during the affine transformation process.
             warped_frame = cv2.resize(warped_frame, (destin_frame[dy1:dy2, dx1:dx2].shape[1], destin_frame[dy1:dy2, dx1:dx2].shape[0]))
             destin_frame[dy1:dy2, dx1:dx2] = destin_frame[dy1:dy2, dx1:dx2] + warped_frame
         return destin_frame
 
     def draw(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> np.ndarray:
         """
-        단일 프레임 시각화.
+        Visualizes a single frame.
 
         Args:
-            frame: 비디오 프레임 이미지.
-            detection_result: frame에 대한 모델 추론 결과.
+            frame: Video frame image.
+            detection_result: Model inference results for the frame.
 
         Returns:
-            annotated_frame: 얼굴 우측, 중심, 좌측 ROI 폴리곤 시각화한 프레임.
+            annotated_frame: The frame with ROI polygons for the right, center, and left sides of the face visualized.
         """
-        ## 주어진 프레임에 얼굴이 잡히지 않은 경우 원본 프레임 그대로 반환.
+        ## If no face is detected in the given frame, return the original frame as is.
         try:
             face_landmark = detection_result.face_landmarks[0]
-        except Exception:
+        except IndexError:
             return frame
         
-        ## 그림 그릴 프레임 복사본 생성하고 길이, 너비 확인.
+        ## Denormalize the coordinates of landmarks using the frame's height and width.
         annotated_frame = np.copy(frame)
-        height, width, _ = frame.shape
+        self.height, self.width, _ = frame.shape
+        landmark_points = [
+            (int(landmark.x * self.width), int(landmark.y * self.height))
+            for landmark in face_landmark
+        ]
+
+        def draw_polygons(regions, color_map, thickness=2):
+            for region, indices in regions.items():
+                polygon_points = np.array([landmark_points[i] for i in indices], dtype=np.int32)
+                cv2.polylines(annotated_frame, [polygon_points], isClosed=True, color=color_map[region], thickness=thickness)
         
-        ## 랜드마크 내부의 정규화되어 있는 좌표들을 프레임 길이, 너비를 사용해 원본으로 복구.
-        landmark_points = [[int(landmark.x * width), int(landmark.y * height)] for landmark in face_landmark]
-
-        ## 프레임 이미지 위에 ROI "R", "L", "M" 경계선 그리기.
-        for region, indices in ROIProcessor.POLYGONS.items():
-            polygon_points = np.array([landmark_points[i] for i in indices], dtype=np.int32)
-            cv2.polylines(annotated_frame, [polygon_points], isClosed=True, color=ROIProcessor.COLORS[region], thickness=2)
-
-        ## 프레임 이미지 위에 ROI "M" 내부 삼각 랜드마크 그리기.
-        for indices in ROIProcessor.TRIANGLE_INDICES:
-            polygon_points = np.array([landmark_points[i] for i in indices], dtype=np.int32)
-            cv2.polylines(annotated_frame, [polygon_points], isClosed=True, color=[220,220,220], thickness=1)
+        ## Draw boundaries of ROI "R", "L", and "M" on the frame.
+        draw_polygons(ROIProcessor.POLYGONS, ROIProcessor.COLORS)
+        ## Draw the triangular landmarks inside the ROI "M" on the frame.
+        draw_polygons({"triangle": ROIProcessor.TRIANGLE_INDICES}, {"triangle": [220, 220, 220]}, thickness=1)
         return annotated_frame
 
-    def calculate(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> list[np.ndarray]:
+    def calculate(self, frame: np.ndarray, detection_result: FaceLandmarkerResult) -> Tuple[np.ndarray]:
         """
-        단일 프레임 RGB 평균 계산.
+        Calculate the RGB mean for a single frame.
 
         Args:
-            frame: 비디오 프레임 이미지.
-            detection_result: frame에 대한 모델 추론 결과.
+            frame: Video frame image.
+            detection_result: Model inference results for the frame.
 
         Returns:
-            R_mean: 오른쪽 뺨 ROI의 RGB 평균값.
-            L_mean: 왼쪽 뺨 ROI의 RGB 평균값.
-            M_mean: 얼굴 중간 ROI의 RGB 평균값.
+            R_mean: RGB mean value for the right cheek ROI.
+            L_mean: RGB mean value for the left cheek ROI.
+            M_mean: RGB mean value for the middle face ROI.
         """
-        ## 폴리곤 형태에 맞춰서 마스킹 씌우고 마스킹 내부 영역 픽셀에 대한 평균값 계산하는 내부함수 설정.
+        ## Return np.nan if no face is detected in the given frame.
+        try:
+            face_landmark = detection_result.face_landmarks[0]
+        except IndexError:
+            return [np.full(3, np.nan) for _ in range(3)]
+
+        ## Denormalize the coordinates of landmarks using the frame's height and width.
+        self.height, self.width, _ = frame.shape
+        landmark_points = [
+            [int(landmark.x * self.width), int(landmark.y * self.height)]
+            for landmark in face_landmark
+        ]
+
+        ## Define an inner function to apply a mask based on polygon shapes and calculate the mean color of pixels inside the masked area.
         def get_mean_color(landmark_indices):
             points = np.array([landmark_points[i] for i in landmark_indices], dtype=np.int32)
-            mask = np.zeros((height, width), dtype=np.uint8)
+            mask = np.zeros((self.height, self.width), dtype=np.uint8)
             cv2.fillPoly(mask, [points], 255)
             pixels = frame[mask == 255]
             return np.mean(pixels, axis=0) if pixels.size > 0 else [0, 0, 0]
 
-        ## 주어진 프레임에 얼굴이 잡히지 않은 경우 np.nan 반환.
-        try:
-            face_landmark = detection_result.face_landmarks[0]
-        except Exception:
-            return [np.array([np.nan, np.nan, np.nan]),
-                    np.array([np.nan, np.nan, np.nan]),
-                    np.array([np.nan, np.nan, np.nan])]
-        
-        ## 프레임 길이, 너비 확인.
-        height, width, _ = frame.shape
-        ## 랜드마크 내부의 정규화되어 있는 좌표들을 프레임 길이, 너비를 사용해 원본으로 복구.
-        landmark_points = [(int(landmark.x * width), int(landmark.y * height)) for landmark in face_landmark]
-        
-        ## 각 ROI 영역에 대한 RGB 평균 계산. 각각 (1,3) 차원의 넘파이 배열.
+        ## Calculate the RGB mean for each ROI. Each result is a NumPy array with shape (1, 3).
         R_mean = get_mean_color(ROIProcessor.POLYGONS["R"])
         L_mean = get_mean_color(ROIProcessor.POLYGONS["L"])
         M_mean = get_mean_color(ROIProcessor.POLYGONS["M"])
         return R_mean, L_mean, M_mean
     
-    def detect_with_map(self) -> np.ndarray:
+    def detect_with_map(self) -> Tuple[np.ndarray, int]:
         """
-        Mediapipe의 FaceLandmark 모델로 검출한 얼굴 중심부 ROI를 삼각형 단위로 나눈다.
-        삼각형 영역별로 아핀 변환을 적용하고, 변환된 이미지를 타겟 영역에 배치하여 직사각형 형태로 재구성한다.
+        Processes each frame by dividing the detected facial region into triangular 
+        subregions, applying affine transformations, and reconstructing a rectangular ROI for each frame. 
+        The processed frames are then padded (if necessary) and reshaped into segments of uniform size.
 
         Returns:
-            transformed_frames: 직사각형 이미지 리스트.
-        """        
-        ## 아핀 변환 적용한 프레임 이미지 저장할 리스트.
-        transformed_frames = []
-
+            transformed_frames: Transformed and segmented frames as a NumPy array of shape (num_segments, segment_size, height, width, channels)
+            fps_local: The frames per second (FPS) used for the video.
+        """
+        transformed_frames = np.empty((self.frame_count, 600, 1320, 3), dtype=np.uint8)
         with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
-            for frame, detection_result in zip(self.frame_list, self.detection_result_list):
-                transformed_frames.append(self.map(frame, detection_result))
+            for idx, (frame, detection_result) in enumerate(zip(self.frame_list, self.detection_result_list)):
+                # Apply affine transformation to each frame based on detection results.
+                transformed_frames[idx] = self.map(frame, detection_result)
                 pbar.update(1)
 
-        transformed_frames = np.array(transformed_frames)
+        # Determine the size of each segment (number of frames per segment).
         segment_size = int(self.fps_local * self.seg_time_interval)
+        # Calculate padding size to make the frame count divisible by the segment size.
         padding_size = (segment_size - (self.frame_count % segment_size)) % segment_size
+        # Calculate the total number of segments after padding.
         segment_num = int((self.frame_count + padding_size) / segment_size)
 
+        # If padding is needed, pad the frames with zeros along the frame dimension.
         if padding_size > 0:
-            transformed_frames = np.pad(transformed_frames,((0, padding_size),(0, 0),(0, 0),(0, 0)), mode='constant', constant_values=0)
-
+            transformed_frames = np.pad(
+                transformed_frames,
+                pad_width=((0, padding_size), (0, 0), (0, 0), (0, 0)),
+                mode='constant',
+                constant_values=0
+            )
+        # Reshape the frames into segments with a fixed size.
         transformed_frames = transformed_frames.reshape(segment_num, segment_size, 600, 1320, 3)
+        # Drop the last segment.
         transformed_frames = transformed_frames[:-1, :, :, :, :]
+        # Return the processed and segmented frames along with the local fps value.
         return transformed_frames, self.fps_local
 
-    def detect_with_draw(self, output_path: str) -> None:
+    def detect_with_draw(self) -> Tuple[np.ndarray, int]:
         """
-        Args:
-            output_path: 결과 시각화 비디오 저장 경로.
+        Visualizes the boundary lines of the face center, left cheek, and right cheek ROIs 
+        detected by the Mediapipe FaceLandmark model.
 
-        Mediapipe의 FaceLandmark 모델로 검출한 얼굴 중심부, 왼쪽 뺨, 오른쪽 뺨 ROI의 경계선을 시각화한다.
-        모델이 도출하는 랜드마크는 사람의 얼굴에 들로네 삼각변환을 적용한 형태이고, 이중 얼굴 중심부에 포함되는 삼각형들도 시각화한다.
-        최종 결과물을 동영상으로 합쳐서 저장한다.
+        Returns:
+            annotated_frames: An array of frames with visual annotations.
+            fps_local: The frames per second (FPS) used for the video.
         """
-
-        ## 랜드마크 경계 및 삼각형 표시된 프레임 담을 리스트.
         annotated_frames = []
-
-        ## tqdm 진행도 설정.
+        annotated_frames = np.empty((self.frame_count, 600, 1320, 3), dtype=np.uint8)
         with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
             for frame, detection_result in zip(self.frame_list, self.detection_result_list):
                 annotated_frames.append(self.draw(frame, detection_result))                
                 pbar.update(1)
-        skvideo.io.vwrite(output_path, annotated_frames, inputdict={'-r': str(self.fps)})
+        return annotated_frames, self.fps_local
 
-    def detect_with_calculate(self) -> list[dict]:
+    def detect_with_calculate(self) -> Tuple[np.ndarray]:
         """
-        Mediapipe의 FaceLandmark 모델로 검출한 얼굴 중심부, 왼쪽 뺨, 오른쪽 뺨 ROI의 경계 바깥을 마스킹 처리하여
-        주어진 ROI 내부의 픽셀만 남기고, RGB 각 채널에 대한 픽셀 평균값을 계산한다.
-        마지막으로 결측치에 대한 선형 보간 작업을 수행하여 딕셔너리 형태로 반환한다.
+        This method processes video frames by masking the regions outside the face center, left cheek, 
+        and right cheek regions of interest (ROIs), leaving only the pixels inside the specified ROIs. 
+        It then calculates the average pixel values for each RGB channel. Afterward, linear interpolation 
+        is applied to handle any missing values, and the result is returned as a tuple of arrays.
 
         Returns:
-            R_means_dict: "R", "G", "B" 키에 대한 np.array(shape=(#frames,)) 평균값 밸류 보유.
-            L_means_dict: "R", "G", "B" 키에 대한 np.array(shape=(#frames,)) 평균값 밸류 보유.
-            M_means_dict: "R", "G", "B" 키에 대한 np.array(shape=(#frames,)) 평균값 밸류 보유.
+            R_means_array: Array of interpolated average red channel values for each segment.
+            L_means_array: Array of interpolated average green channel values for each segment.
+            M_means_array: Array of interpolated average blue channel values for each segment.
+            fps_local: The frames per second (FPS) of the video.
         """
+        # Helper function for linear interpolation of missing values in an array.
         def interpolate(array: np.ndarray) -> np.ndarray:
             for row in range(len(array)):
-                # 현재 행 데이터 가져오기
                 current_row = array[row]
-                # 결측치의 인덱스와 비결측치 인덱스 구분
                 mask = np.isnan(current_row)
-                # 결측치가 존재하면 보간 수행
                 if np.any(mask):
                     current_row[mask] = np.interp(
                         np.flatnonzero(mask),
                         np.flatnonzero(~mask),
-                        current_row[~mask])
+                        current_row[~mask]
+                    )
             return array
 
-        ## ROI별 RGB 평균값 담을 리스트.
+        # Lists to store the average RGB values for each region of interest (ROI)
         R_means_list = []
         L_means_list = []
         M_means_list = []
-        
+
+        # Process each frame and calculate the average RGB values for the ROIs
         with tqdm(total=self.frame_count, desc="Processing Frames", unit="frame") as pbar:
             for frame, detection_result in zip(self.frame_list, self.detection_result_list):
+                # Calculate the mean RGB values for the current frame and detection result
                 R_mean, L_mean, M_mean = self.calculate(frame, detection_result)
+                # Append the results to the respective lists
                 R_means_list.append(R_mean)
                 L_means_list.append(L_mean)
                 M_means_list.append(M_mean)
-                pbar.update(1)
+                pbar.update(1)  # Update the progress bar
 
-        ## RGB 리스트 결측치 선형 보간.
+        # Perform linear interpolation to fill in any missing values for the RGB lists
         R_means_array = interpolate(np.array(R_means_list).T)
         L_means_array = interpolate(np.array(L_means_list).T)
         M_means_array = interpolate(np.array(M_means_list).T)
 
+        # Calculate the segment size and padding required to align the data
         segment_size = int(self.fps_local * self.seg_time_interval)
         padding_size = (segment_size - (self.frame_count % segment_size)) % segment_size
         segment_num = int((self.frame_count + padding_size) / segment_size)
         
+        # If padding is required, pad the arrays with zeros
         if padding_size > 0:
             R_means_array = np.pad(R_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
             L_means_array = np.pad(L_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
             M_means_array = np.pad(M_means_array, ((0, 0), (0, padding_size)), mode='constant', constant_values=0)
 
+        # Reshape and transpose the arrays to align with the required segment structure
         R_means_array = R_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
         L_means_array = L_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
         M_means_array = M_means_array.reshape(3, segment_num, segment_size).transpose(1, 2, 0)
 
+        # Remove the last segment, which may be incomplete due to padding
         R_means_array = R_means_array[:-1, :, :]
         L_means_array = L_means_array[:-1, :, :]
         M_means_array = M_means_array[:-1, :, :]
+
+        # Return the processed arrays and the FPS
         return R_means_array, L_means_array, M_means_array, self.fps_local
