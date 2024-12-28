@@ -87,7 +87,7 @@ def split_and_save_videos(csv_path, train_csv, test_csv, test_ratio=0.3):
 # 실행 예제
 if __name__ == "__main__":
     # 작업 디렉토리와 저장할 CSV 파일 경로
-    base_directory = "D:/2024년/4-1/산학/data/ff_data"  # 탐색할 루트 디렉토리
+    base_directory = "D:/2024/4-1/fakebusters/data/ff_data"  # 탐색할 루트 디렉토리
     output_csv = "video_list.csv"  # 전체 데이터 저장할 CSV 파일 이름
 
     train_csv = "train_video_list.csv"  # 훈련 데이터 저장 파일
