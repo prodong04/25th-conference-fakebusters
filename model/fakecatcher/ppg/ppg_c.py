@@ -11,7 +11,7 @@ class PPG_C:
     """
     def __init__(self, RGB_mean_array: np.ndarray, fps: int):
         """
-        ROI 경로로 비디오 정보를 읽어 인스턴스 초기화.
+        Initialize the instance by reading video information from the ROI path.
         """
         self.RGB_mean_array = RGB_mean_array
         self.fps = fps
@@ -22,14 +22,14 @@ class PPG_C:
 
     def bandpass_filter(self, lpf: float, hpf: float) -> tuple:
         """
-        대역 통과 필터 설계.
+        Design a band-pass filter.
 
         Args:
-            lpf: 저주파 차단 주파수.
-            hpf: 고주파 차단 주파수.
+            lpf: Low-pass cutoff frequency.
+            hpf: High-pass cutoff frequency.
         
         Returns:
-            B, A: 필터 계수.
+            B, A: Filter coefficients.
         """
         nyquist_freq = 0.5 * self.fps
         B, A = butter(3, [lpf / nyquist_freq, hpf / nyquist_freq], btype='bandpass')
@@ -37,34 +37,34 @@ class PPG_C:
 
     def compute_signal(self, lpf=0.7, hpf=2.5, win_sec=1.6, step_sec=0.7) -> np.ndarray:
         """
-        CHROM 알고리즘을 사용해 PPG 신호를 계산.
+        Compute the PPG signal using the CHROM algorithm.
 
         Args:
-            lpf: 저주파 차단 주파수.
-            hpf: 고주파 차단 주파수.
-            win_sec: 슬라이딩 윈도우 길이 (초).
+            lpf: Low-pass cutoff frequency.
+            hpf: High-pass cutoff frequency.
+            win_sec: Sliding window length (seconds).
         
         Returns:
-            BVP: PPG 신호.
+            BVP: PPG signal.
         """
-        # 1. RGB 평균값 추출
+        # 1. Extract RGB mean values
         num_frames = self.RGB_mean_array.shape[0]
 
         # 2. Band-pass filtering
         B, A = self.bandpass_filter(lpf, hpf)
         
-        # 3. 슬라이딩 윈도우 설정
+        # 3. Set sliding window
         win_length = int(self.fps * win_sec)
         step_size = int(self.fps * step_sec)
 
-        # 4. PPG 신호 계산
-        COMPUTED_PPG_SIGNAL = np.zeros(num_frames)  # 결과 배열을 num_frames 크기로 초기화
+        # 4. Compute PPG signal
+        COMPUTED_PPG_SIGNAL = np.zeros(num_frames)  # Initialize result array with num_frames size
         win_start = 0
 
         while win_start + win_length <= num_frames:
             win_end = win_start + win_length
 
-            # 현재 윈도우에 대한 평균 및 정규화
+            # Mean and normalization for the current window
             rgb_base = np.mean(self.RGB_mean_array[win_start:win_end], axis=0)
             rgb_base += 1e-6
             rgb_norm = self.RGB_mean_array[win_start:win_end] / rgb_base
@@ -72,7 +72,7 @@ class PPG_C:
             Xs = 3 * rgb_norm[:, 0] - 2 * rgb_norm[:, 1]
             Ys = 1.5 * rgb_norm[:, 0] + rgb_norm[:, 1] - 1.5 * rgb_norm[:, 2]
 
-            # 필터 적용
+            # Apply filter
             Xf = filtfilt(B, A, Xs, axis=0)
             Yf = filtfilt(B, A, Ys)
 
@@ -85,10 +85,10 @@ class PPG_C:
             S_window = Xf - alpha * Yf
             S_window *= windows.hann(win_length)
 
-            # 결과 반영
+            # Reflect results
             COMPUTED_PPG_SIGNAL[win_start:win_end] += S_window
 
-            # 다음 윈도우로 이동
+            # Move to the next window
             win_start += step_size
 
         return COMPUTED_PPG_SIGNAL
