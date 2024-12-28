@@ -38,7 +38,7 @@ class PPG_MAP:
 
         for row in range(num_rows):
             for col in range(num_cols):
-                PPG = PPG_C.from_RGB(RGB=region_means[:, col, row, :], fps=self.fps)
+                PPG = PPG_C(RGB_mean_array=region_means[:, col, row, :], fps=self.fps)
                 signal = PPG.compute_signal()
                 signal = frequency_resample(signal, time_interval=self.seg_time_interval, original_fps=self.fps, target_fps=self.fps_standard)
                 fft_values = np.fft.fft(signal)
