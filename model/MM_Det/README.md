@@ -22,6 +22,8 @@ python main.py
 
 ### 2. Check Server
 
+```bash
 curl -X POST "[your_address]/process_video/" \
      -H "Content-Type: multipart/form-data" \
      -F "[mp4 folder directory]"
+```
