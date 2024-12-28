@@ -2,7 +2,7 @@ import pandas as pd
 from typing import List, Tuple
 import os
 
-def load_data(root_dir, csv_path: str) -> Tuple[List[str]]:
+def load_fakeavceleb_data(root_dir: str, csv_path: str) -> Tuple[List[str]]:
     """
     CSV 파일에서 source/id 형식의 비디오 경로를 생성하여 반환합니다.
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     csv_path = "/root/audio-visual-forensics/data/FakeAVCeleb/meta_data.csv"
 
     # 비디오 경로 로드
-    video_paths = load_data(csv_path)
+    video_paths = load_fakeavceleb_data(csv_path)
     
     # 출력 예시
     for path in video_paths:
