@@ -2,6 +2,7 @@ import os
 import csv
 import pandas as pd
 from pathlib import Path
+from sklearn.model_selection import train_test_split
 
 def get_video_files(base_dir, csv_path):
     """
@@ -52,11 +53,48 @@ def load_fakeforensics_data(csv_path: str):
     labels = data['label']
     return video_paths, labels
 
+def split_and_save_videos(csv_path, train_csv, test_csv, test_ratio=0.3):
+    """
+    CSV 파일을 로드하여 훈련 데이터와 테스트 데이터로 나누고 저장합니다.
+    - csv_path: 전체 데이터셋이 저장된 CSV 파일 경로
+    - train_csv: 훈련 데이터셋 CSV 파일 경로
+    - test_csv: 테스트 데이터셋 CSV 파일 경로
+    - test_ratio: 테스트 데이터 비율 (기본값 0.3)
+    """
+    # 데이터 로드
+    data = pd.read_csv(csv_path)
+
+    # 라벨별로 데이터 나누기
+    train_data = []
+    test_data = []
+    for label in data['label'].unique():
+        label_data = data[data['label'] == label]
+        train, test = train_test_split(label_data, test_size=test_ratio, random_state=42)
+        train_data.append(train)
+        test_data.append(test)
+
+    # 병합
+    train_data = pd.concat(train_data)
+    test_data = pd.concat(test_data)
+
+    # 파일 저장
+    train_data.to_csv(train_csv, index=False, encoding="utf-8")
+    test_data.to_csv(test_csv, index=False, encoding="utf-8")
+
+    print(f"Train CSV 파일이 저장되었습니다: {train_csv}")
+    print(f"Test CSV 파일이 저장되었습니다: {test_csv}")
+
 # 실행 예제
 if __name__ == "__main__":
     # 작업 디렉토리와 저장할 CSV 파일 경로
     base_directory = "D:/2024년/4-1/산학/data/ff_data"  # 탐색할 루트 디렉토리
-    output_csv = "video_list.csv"  # 저장할 CSV 파일 이름
+    output_csv = "video_list.csv"  # 전체 데이터 저장할 CSV 파일 이름
 
-    # 함수 실행
+    train_csv = "train_video_list.csv"  # 훈련 데이터 저장 파일
+    test_csv = "test_video_list.csv"    # 테스트 데이터 저장 파일
+
+    # 모든 비디오 정보를 수집하여 CSV로 저장
     get_video_files(base_directory, output_csv)
+
+    # 데이터를 train/test로 나누어 각각 저장
+    split_and_save_videos(output_csv, train_csv, test_csv)
