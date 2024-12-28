@@ -5,6 +5,7 @@ import httpx
 import os, shutil
 import numpy as np
 import json
+import subprocess
 
 router = APIRouter(
     prefix="/api/models",
@@ -62,7 +63,7 @@ async def roi_model(file: UploadFile = File(...)):
         
     video_file = open(file_path, "rb")
   
-    model_server_url = "http://165.132.46.83:32274/upload-video/"
+    model_server_url = "https://358e-165-132-46-83.ngrok-free.app/upload-video/"
     
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -71,7 +72,7 @@ async def roi_model(file: UploadFile = File(...)):
             
             headers = {
                 "File-Path": file_path,
-                "Score": f"{response.headers["score"]}",
+                "Score":str(response.headers["score"]),
                 "Access-Control-Expose-Headers": "File-Path, Score"
             }
             return StreamingResponse(content=response.iter_bytes(), headers=headers)
@@ -88,7 +89,8 @@ async def model(file: UploadFile = File(...)):
     '''
 
     model_sever_url = "http://165.132.46.87:32116/process_video/"
-    
+    model_server_url = "https://9d4f-165-132-46-93.ngrok-free.app/process_video/"
+
     file_path = os.path.join(VIDEO_DIR, file.filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -98,14 +100,14 @@ async def model(file: UploadFile = File(...)):
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(model_sever_url, files={"file": video_file}, headers=headers)
+            response = await client.post(model_server_url, files={"file": video_file}, headers=headers)
             response.raise_for_status()
             
             video_data = response.content
             
             headers = {
                 "File-Path": file_path,
-                "Score": f"{response.headers["X-Inference-Result"]}",
+                "Score": str(response.headers["X-Inference-Result"]),
                 "Access-Control-Expose-Headers": "File-Path, Score"
             }
             
@@ -157,7 +159,7 @@ async def get_visual(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        subprocess.run(["python3", PPG_DIR +"/main.py", "-v", file_path, "-c", PPG_DIR+"/config.yaml"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(["python", PPG_DIR +"/main.py", "-v", file_path, "-c", PPG_DIR+"/config.yaml"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Error in processing video {e}")
     
