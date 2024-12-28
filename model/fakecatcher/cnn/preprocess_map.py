@@ -24,6 +24,10 @@ if __name__ == "__main__":
     if not os.path.exists(args.config_path):
         raise FileNotFoundError(f"Config file not found: {args.config_path}")
     
+    if not os.path.exists(args.output_directory):
+        os.makedirs(os.path.dirname(args.output_directory), exist_ok=True)
+        output_path = os.path.join(args.output_directory, "ppg_maps.json")
+    
     with open(args.config_path, 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
         logger.info("config file was loaded succesfully.")
@@ -73,10 +77,11 @@ if __name__ == "__main__":
                 'ppg_map': ppg_map.tolist()
             })
             
-    if not os.path.exists(args.output_directory):
-        os.makedirs(os.path.dirname(args.output_directory), exist_ok=True)
-    output_path = os.path.join(args.output_directory, "ppg_maps.json")
-        
+        if i%100==0:                
+            with open(output_path, 'w', encoding='utf-8') as json_file:
+                json.dump(results, json_file, ensure_ascii=False, indent=4)
+            logger.info(f"Preliminary Results saved to {output_path} at iteration {i}")
+            
     with open(output_path, 'w', encoding='utf-8') as json_file:
         json.dump(results, json_file, ensure_ascii=False, indent=4)
     logger.info(f"Results saved to {output_path}")
