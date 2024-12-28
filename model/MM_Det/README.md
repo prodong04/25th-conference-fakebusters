@@ -9,5 +9,19 @@ The test code has been revised to support inference, and additional inference fu
 To perform inference, navigate to the `inference` directory and run the following command:
 
 ```bash
+cd ./25th-conference-fakebusters/model/MM_Det/
+pip install -r requirements.txt
+cd ./25th-conference-fakebusters/model/MM_Det/LLaVa/
+pip install -e .
+
+
+
 cd ./25th-conference-fakebusters/model/MM_Det/inference
 python main.py
+```
+
+### 2. Check Server
+
+curl -X POST "[your_address]/process_video/" \
+     -H "Content-Type: multipart/form-data" \
+     -F "[mp4 folder directory]"
