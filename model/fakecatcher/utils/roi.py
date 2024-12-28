@@ -125,7 +125,7 @@ class ROIProcessor:
             config: configuration dictionary.
         """
         self.video_path = video_path
-        self.model_path = config["model_path"]
+        self.model_path = config["landmarker_path"]
         self.fps_standard = int(config["fps_standard"])
         self.seg_time_interval = int(config["seg_time_interval"])
         self.detection_result_list = []
