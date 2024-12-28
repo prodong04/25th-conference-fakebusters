@@ -181,3 +181,11 @@ frontend/dbust/public/data
 **/*.pkl
 
 **/*.yaml
+
+
+# model/mm-det ignore
+./25th-conference-fakebusters/model/MM_Det/weights
+./25th-conference-fakebusters/model/MM_Det/inference/mm_representation
+./25th-conference-fakebusters/model/MM_Det/inference/reconstruction
+./25th-conference-fakebusters/model/MM_Det/inference/uploads
+
