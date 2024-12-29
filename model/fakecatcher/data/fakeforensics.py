@@ -1,5 +1,6 @@
 import os
 import csv
+import argparse
 import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -86,12 +87,16 @@ def split_and_save_videos(csv_path, train_csv, test_csv, test_ratio=0.3):
 
 # 실행 예제
 if __name__ == "__main__":
-    # 작업 디렉토리와 저장할 CSV 파일 경로
-    base_directory = "D:/2024/4-1/fakebusters/data/ff_data"  # 탐색할 루트 디렉토리
-    output_csv = "video_list.csv"  # 전체 데이터 저장할 CSV 파일 이름
 
-    train_csv = "train_video_list.csv"  # 훈련 데이터 저장 파일
-    test_csv = "test_video_list.csv"    # 테스트 데이터 저장 파일
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-b", "--base_dirc", type=str, required=True, help="Path to the base directory")
+    args = parser.parse_args()
+
+    # 작업 디렉토리와 저장할 CSV 파일 경로
+    base_directory = args.base_dirc  # 탐색할 루트 디렉토리
+    output_csv = os.path.join(base_directory,"video_list.csv")  # 전체 데이터 저장할 CSV 파일 이름
+    train_csv = os.path.join(base_directory,"train_video_list.csv")  # 훈련 데이터 저장 파일
+    test_csv = os.path.join(base_directory,"test_video_list.csv")    # 테스트 데이터 저장 파일
 
     # 모든 비디오 정보를 수집하여 CSV로 저장
     get_video_files(base_directory, output_csv)
