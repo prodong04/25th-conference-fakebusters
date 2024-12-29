@@ -71,20 +71,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             setIsProcessing(true);
 
             try {
-                // S3 File Upload
-                // const formData = new FormData();
-                // formData.append('file', selectedFile);
-
-                // const response = await fetch('http://localhost:8000/api/files/upload', {
-                //     method: 'POST',
-                //     body: formData,
-                // });
-                // if (!response.ok) {
-                //     throw new Error('Upload failed');
-                // }
-                // const data = await response.json();
-                // console.log('File uploaded successfully:', data);
-
                 // Step 1: Process Lipreading
                 const lipFormData = new FormData();
                 lipFormData.append('file', selectedFile);
@@ -99,13 +85,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
                 }
 
                 const lipScore = lipResponse.headers.get('Score');
-                console.log('Score:', lipScore);
-
                 const lipVideoBlob = await lipResponse.blob();
                 const lipVideoUrl = URL.createObjectURL(lipVideoBlob);
-                console.log('Video URL:', lipVideoUrl);
 
-
+                lipSetScore(lipScore || '');
+                lipSetVideoUrl(lipVideoUrl);
 
                 // Step 2: Process with MMNET model
                 const mmnetFormData = new FormData();
@@ -120,25 +104,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
                     throw new Error('Failed to post video');
                 }
 
-                const mmnetFilePath = mmnetResponse.headers.get('File-Path');
-                console.log('File path:', mmnetFilePath);
-
                 const mmnetScore = mmnetResponse.headers.get('Score');
-                console.log('Score:', mmnetScore);
-
                 const mmnetVideoBlob = await mmnetResponse.blob();
                 const mmnetVideoUrl = URL.createObjectURL(mmnetVideoBlob);
-                console.log('Video URL:', mmnetVideoUrl);
-
                 
-                // // Simulate upload
-                // await new Promise((resolve) => setTimeout(resolve, 1000));
-                // console.log('Simulated upload completed in 1000 milliseconds');
-                
-                lipSetScore(lipScore || '');
-                lipSetVideoUrl(lipVideoUrl);
                 mmnetSetScore(mmnetScore || '');
                 mmnetSetVideoUrl(mmnetVideoUrl);
+
                 onFileUpload(selectedFile);
 
                 setPreview(null);
@@ -166,11 +138,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             onDrop={handleDrop}
         >
             {isProcessing ? (
-                <HStack gap="10">
-                    <ProgressCircleRoot size="lg" value={null}>
-                        <ProgressCircleRing cap="round" />
-                    </ProgressCircleRoot>
-                </HStack>
+                <div className={styles.previewContainer}>
+                    <HStack gap="10" className={styles.progressContainer}>
+                        <ProgressCircleRoot size="lg" value={null}>
+                            <ProgressCircleRing cap="round" />
+                        </ProgressCircleRoot>
+                    </HStack>
+                    {selectedFile && selectedFile.type.startsWith('video/') ? (
+                        <video autoPlay loop muted className={`${styles.preview} ${styles.processing}`} src={preview || undefined} />
+                    ) : (
+                        <img className={`${styles.preview} ${styles.processing}`} src={preview || undefined} alt="Preview" />
+                    )}
+                </div>
             ) : (
                 preview ? (
                     <div className={styles.previewContainer}>
