@@ -9,9 +9,10 @@ interface FileUploadProps {
     lipSetVideoUrl: (url: string) => void;
     mmnetSetScore: (score: string) => void;
     mmnetSetVideoUrl: (url: string) => void;
+    setPpgVideos: (ppgVideos: any) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipSetVideoUrl, mmnetSetScore, mmnetSetVideoUrl }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipSetVideoUrl, mmnetSetScore, mmnetSetVideoUrl,setPpgVideos }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [isPreviewShown, setIsPreviewShown] = useState(false);
@@ -71,7 +72,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const lipFormData = new FormData();
             lipFormData.append('file', file);
 
-            const lipResponse = await fetch('http://localhost:8000/api/models/lipforensic', {
+            const lipResponse = await fetch('http://13.209.124.7:8000/api/models/lipforensic', {
                 method: 'POST',
                 body: lipFormData,
             });
@@ -96,7 +97,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const mmnetFormData = new FormData();
             mmnetFormData.append('file', file);
 
-            const mmnetResponse = await fetch('http://localhost:8000/api/models/mmnet', {
+            const mmnetResponse = await fetch('http://13.209.124.7:8000/api/models/mmnet', {
                 method: 'POST',
                 body: mmnetFormData,
             });
@@ -116,14 +117,76 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
         }
     }, [mmnetSetScore, mmnetSetVideoUrl]);
 
+    const uploadVisualPPG = useCallback(async (file: File) => {
+        try {
+            const ppgFormData = new FormData();
+            ppgFormData.append('file', file);
+
+            const ppgResponse = await fetch('http://13.209.124.7:8000/api/models/visual-ppg', {
+                method: 'POST',
+                body: ppgFormData,
+            });
+
+            if (!ppgResponse.ok) {
+                throw new Error('Failed to post video');
+            }
+
+            const ppgData = await ppgResponse.json();
+            console.log('Visual PPG response:', ppgData);
+
+            // Store the video names
+            return ppgData.videos;
+        } catch (error) {
+            console.error('Visual PPG upload error:', error);
+            return null;
+        }
+    }, []);
+
+    const getPPGVideo = useCallback(async (videoNames: { ppg_graph: string; ppg_mask: string; ppg_transformed: string }) => {
+        try {
+            const baseUrl = 'http://13.209.124.7:8000/api/models/video/';
+            const ppgGraphResponse = await fetch(`${baseUrl}${videoNames.ppg_graph}`);
+            const ppgMaskResponse = await fetch(`${baseUrl}${videoNames.ppg_mask}`);
+            const ppgTransformedResponse = await fetch(`${baseUrl}${videoNames.ppg_transformed}`);
+
+            if (!ppgGraphResponse.ok || !ppgMaskResponse.ok || !ppgTransformedResponse.ok) {
+                throw new Error('Failed to fetch PPG videos');
+            }
+
+            const ppgGraphBlob = await ppgGraphResponse.blob();
+            const ppgMaskBlob = await ppgMaskResponse.blob();
+            const ppgTransformedBlob = await ppgTransformedResponse.blob();
+
+            const ppgGraphUrl = URL.createObjectURL(ppgGraphBlob);
+            const ppgMaskUrl = URL.createObjectURL(ppgMaskBlob);
+            const ppgTransformedUrl = URL.createObjectURL(ppgTransformedBlob);
+
+            return {
+                ppgGraphUrl,
+                ppgMaskUrl,
+                ppgTransformedUrl,
+            };
+        } catch (error) {
+            console.error('Failed to fetch PPG videos:', error);
+            return null;
+        }
+    }, []);
+
+
     const handleUpload = useCallback(async () => {
         if (selectedFile) {
             setIsProcessing(true);
 
-            await Promise.all([
+            const [mmnetResult, lipreadingResult, visualPpgResult] = await Promise.all([
                 uploadMMNET(selectedFile),
-                uploadLipreading(selectedFile)
+                uploadLipreading(selectedFile),
+                uploadVisualPPG(selectedFile)
             ]);
+    
+            if (visualPpgResult) {
+                const ppgVideoUrls = await getPPGVideo(visualPpgResult);
+                setPpgVideos(ppgVideoUrls);
+            }
 
             onFileUpload(selectedFile);
 
@@ -132,7 +195,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             setSelectedFile(null);
             setIsProcessing(false);
         }
-    }, [selectedFile, onFileUpload, uploadLipreading, uploadMMNET]);
+    }, [selectedFile, onFileUpload, uploadLipreading, uploadMMNET, uploadVisualPPG]);
 
     const handleClear = useCallback(() => {
         setPreview(null);
@@ -174,29 +237,31 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
                         </div>
                     </div>
                 ) : (
-                    <form className={styles.uploadForm}>
-                        <div className={styles.uploadIconContainer}>
-                            <label className={styles.label} htmlFor="fileElem">
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    fill="#ebebeb" 
-                                    className={styles.uploadIcon} 
-                                    viewBox="0 0 16 16"
-                                >
-                                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"></path>
-                                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"></path>
-                                </svg>
-                            </label>
-                        </div>
-                        <input 
-                            type="file" 
-                            id="fileElem" 
-                            className={styles.fileInput} 
-                            accept="image/*,video/*" 
-                            onChange={handleFileChange}
-                        />
-                        <label className={styles.button} htmlFor="fileElem">Upload Image/Video</label>
-                    </form>
+
+                        <form className={styles.uploadForm}>
+                            <div className={styles.uploadIconContainer}>
+                                <label className={styles.label} htmlFor="fileElem">
+                                    <svg 
+                                        xmlns="http://www.w3.org/2000/svg" 
+                                        fill="#ebebeb" 
+                                        className={styles.uploadIcon} 
+                                        viewBox="0 0 16 16"
+                                    >
+                                        <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"></path>
+                                        <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"></path>
+                                    </svg>
+                                </label>
+                            </div>
+                            <input 
+                                type="file" 
+                                id="fileElem" 
+                                className={styles.fileInput} 
+                                accept="image/*,video/*" 
+                                onChange={handleFileChange}
+                            />
+                            <label className={styles.button} htmlFor="fileElem">Upload Image/Video</label>
+                        </form>
+
                 )
             )}
         </div>

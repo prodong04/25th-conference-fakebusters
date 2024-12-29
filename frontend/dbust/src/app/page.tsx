@@ -14,6 +14,7 @@ const MainPage: React.FC = () => {
   const [lipScore, lipSetScore] = useState<string | null>(null);
   const [mmnetVideoUrl, mmnetSetVideoUrl] = useState<string | null>(null);
   const [mmnetScore, mmnetSetScore] = useState<string | null>(null);
+  const [ppgVideos, setPpgVideos] = useState<{ ppgGraphUrl: string; ppgMaskUrl: string; ppgTransformedUrl: string } | null>(null);
 
 
 
@@ -41,10 +42,18 @@ const MainPage: React.FC = () => {
         lipSetScore={lipSetScore}
         mmnetSetScore={mmnetSetScore}
         mmnetSetVideoUrl={mmnetSetVideoUrl}
+        setPpgVideos={setPpgVideos}
       />
-      <p className="mt-2 mb-64 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
+      <p className="mt-2 flex-col mb-64 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
       {mmnetVideoUrl && <AugmentedVideo videoUrl={mmnetVideoUrl} score={mmnetScore} />}
       {lipVideoUrl && <LipVideo videoUrl={lipVideoUrl} score={lipScore} />}
+      {ppgVideos && (
+                            <div className='flex flex-col items-center justify-center'>
+                                <video autoPlay loop muted src={ppgVideos.ppgGraphUrl} />
+                                <video autoPlay loop muted src={ppgVideos.ppgMaskUrl} />
+                                <video autoPlay loop muted src={ppgVideos.ppgTransformedUrl} />
+                            </div>
+                        )}
     </main>
   );
 };
