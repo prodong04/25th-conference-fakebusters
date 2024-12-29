@@ -9,6 +9,7 @@ interface FileUploadProps {
     lipSetVideoUrl: (url: string) => void;
     mmnetSetScore: (score: string) => void;
     mmnetSetVideoUrl: (url: string) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setPpgVideos: (ppgVideos: any) => void;
 }
 
@@ -177,6 +178,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
         if (selectedFile) {
             setIsProcessing(true);
 
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const [mmnetResult, lipreadingResult, visualPpgResult] = await Promise.all([
                 uploadMMNET(selectedFile),
                 uploadLipreading(selectedFile),

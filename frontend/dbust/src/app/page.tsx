@@ -8,6 +8,7 @@ import LipVideo from './LipVideo';
 
 const MainPage: React.FC = () => {
   const [result, setResult] = useState<boolean | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isProcessing, setIsProcessing] = useState(false);
   const [originalVideoSrc, setOriginalVideoSrc] = useState<string | null>(null);
   const [lipVideoUrl, lipSetVideoUrl] = useState<string | null>(null);
