@@ -52,8 +52,6 @@ mkdir -p manipulated_sequences original_sequences
 # Define zip file details
 declare -A file_details=(
     ["manipulated_sequences_1.zip"]="13cGlSlgv6-85hpEim0n9LwFHapK5vr9d"
-    ["manipulated_sequences_2.zip"]="1SOfyJ_wdoFdroL--06FbQm3SDm_0Edsr"
-    ["actors.zip"]="10Cfjfo_SwuOHXK-q-2B5d_j7tIDUcLPb"
 )
 
 # Check and download zip files if not already present
@@ -69,12 +67,6 @@ done
 # Extract and move files
 if [ -f "manipulated_sequences_1.zip" ]; then
     unzip -o manipulated_sequences_1.zip -d manipulated_sequences/
-fi
-if [ -f "manipulated_sequences_2.zip" ]; then
-    unzip -o manipulated_sequences_2.zip -d manipulated_sequences/
-fi
-if [ -f "actors.zip" ]; then
-    unzip -o actors.zip -d original_sequences/
 fi
 cd
 
