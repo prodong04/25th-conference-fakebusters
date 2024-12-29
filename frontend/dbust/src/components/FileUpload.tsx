@@ -66,63 +66,73 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
         }
     }, [handleFile]);
 
+    const uploadLipreading = useCallback(async (file: File) => {
+        try {
+            const lipFormData = new FormData();
+            lipFormData.append('file', file);
+
+            const lipResponse = await fetch('http://localhost:8000/api/models/lipforensic', {
+                method: 'POST',
+                body: lipFormData,
+            });
+
+            if (!lipResponse.ok) {
+                throw new Error('Failed to post video');
+            }
+
+            const lipScore = lipResponse.headers.get('Score');
+            const lipVideoBlob = await lipResponse.blob();
+            const lipVideoUrl = URL.createObjectURL(lipVideoBlob);
+
+            lipSetScore(lipScore || '');
+            lipSetVideoUrl(lipVideoUrl);
+        } catch (error) {
+            console.error('Lipreading upload error:', error);
+        }
+    }, [lipSetScore, lipSetVideoUrl]);
+
+    const uploadMMNET = useCallback(async (file: File) => {
+        try {
+            const mmnetFormData = new FormData();
+            mmnetFormData.append('file', file);
+
+            const mmnetResponse = await fetch('http://localhost:8000/api/models/mmnet', {
+                method: 'POST',
+                body: mmnetFormData,
+            });
+
+            if (!mmnetResponse.ok) {
+                throw new Error('Failed to post video');
+            }
+
+            const mmnetScore = mmnetResponse.headers.get('Score');
+            const mmnetVideoBlob = await mmnetResponse.blob();
+            const mmnetVideoUrl = URL.createObjectURL(mmnetVideoBlob);
+
+            mmnetSetScore(mmnetScore || '');
+            mmnetSetVideoUrl(mmnetVideoUrl);
+        } catch (error) {
+            console.error('MMNET upload error:', error);
+        }
+    }, [mmnetSetScore, mmnetSetVideoUrl]);
+
     const handleUpload = useCallback(async () => {
         if (selectedFile) {
             setIsProcessing(true);
 
-            try {
-                // Step 1: Process Lipreading
-                const lipFormData = new FormData();
-                lipFormData.append('file', selectedFile);
+            await Promise.all([
+                uploadMMNET(selectedFile),
+                uploadLipreading(selectedFile)
+            ]);
 
-                const lipResponse = await fetch('http://localhost:8000/api/models/lipforensic', {
-                    method: 'POST',
-                    body: lipFormData,
-                });
+            onFileUpload(selectedFile);
 
-                if (!lipResponse.ok) {
-                    throw new Error('Failed to post video');
-                }
-
-                const lipScore = lipResponse.headers.get('Score');
-                const lipVideoBlob = await lipResponse.blob();
-                const lipVideoUrl = URL.createObjectURL(lipVideoBlob);
-
-                lipSetScore(lipScore || '');
-                lipSetVideoUrl(lipVideoUrl);
-
-                // Step 2: Process with MMNET model
-                const mmnetFormData = new FormData();
-                mmnetFormData.append('file', selectedFile);
-
-                const mmnetResponse = await fetch('http://localhost:8000/api/models/mmnet', {
-                    method: 'POST',
-                    body: mmnetFormData,
-                });
-
-                if (!mmnetResponse.ok) {
-                    throw new Error('Failed to post video');
-                }
-
-                const mmnetScore = mmnetResponse.headers.get('Score');
-                const mmnetVideoBlob = await mmnetResponse.blob();
-                const mmnetVideoUrl = URL.createObjectURL(mmnetVideoBlob);
-                
-                mmnetSetScore(mmnetScore || '');
-                mmnetSetVideoUrl(mmnetVideoUrl);
-
-                onFileUpload(selectedFile);
-
-                setPreview(null);
-                setIsPreviewShown(false);
-                setSelectedFile(null);
-            } catch (error) {
-                console.error('Upload error:', error);
-            } finally {
-                setIsProcessing(false);
-            }
+            setPreview(null);
+            setIsPreviewShown(false);
+            setSelectedFile(null);
+            setIsProcessing(false);
         }
-    }, [selectedFile, onFileUpload, lipSetScore, lipSetVideoUrl, mmnetSetScore, mmnetSetVideoUrl]);
+    }, [selectedFile, onFileUpload, uploadLipreading, uploadMMNET]);
 
     const handleClear = useCallback(() => {
         setPreview(null);

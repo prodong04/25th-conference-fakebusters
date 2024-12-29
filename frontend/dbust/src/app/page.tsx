@@ -43,8 +43,8 @@ const MainPage: React.FC = () => {
         mmnetSetVideoUrl={mmnetSetVideoUrl}
       />
       <p className="mt-2 mb-64 text-sm text-gray-600">Upload an image or video to check for deepfakes.</p>
-      {lipVideoUrl && <LipVideo videoUrl={lipVideoUrl} score={lipScore} />}
       {mmnetVideoUrl && <AugmentedVideo videoUrl={mmnetVideoUrl} score={mmnetScore} />}
+      {lipVideoUrl && <LipVideo videoUrl={lipVideoUrl} score={lipScore} />}
     </main>
   );
 };
