@@ -184,10 +184,10 @@ async def get_result(file: UploadFile = File(...)):
             
             headers = {
                 "File-Path": file_path,
-                "Score":str(response.headers["score"]),
-                "Access-Control-Expose-Headers": "File-Path, Score"
+                "Access-Control-Expose-Headers": "File-Path"
             }
-            return StreamingResponse(content=response.iter_bytes(), headers=headers)
+            score = response.json()["score"]
+            return JSONResponse(content={"Score": score}, headers=headers)
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from model server: {e.response.text}")
@@ -211,10 +211,10 @@ async def get_result(file: UploadFile = File(...)):
             
             headers = {
                 "File-Path": file_path,
-                "Score":str(response.headers["score"]),
-                "Access-Control-Expose-Headers": "File-Path, Score"
+                "Access-Control-Expose-Headers": "File-Path"
             }
-            return StreamingResponse(content=response.iter_bytes(), headers=headers)
+            score = response.json()["score"]
+            return JSONResponse(content={"Score": score}, headers=headers)
         
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from model server: {e.response.text}")
