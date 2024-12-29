@@ -26,8 +26,8 @@ if __name__ == "__main__":
     
     if not os.path.exists(args.output_directory):
         os.makedirs(os.path.dirname(args.output_directory), exist_ok=True)
-        output_path = os.path.join(args.output_directory, "ppg_maps.json")
-    
+    output_path = os.path.join(args.output_directory, "ppg_maps.json")
+
     with open(args.config_path, 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
         logger.info("config file was loaded succesfully.")

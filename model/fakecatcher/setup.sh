@@ -29,4 +29,21 @@ conda install -c conda-forge ffmpeg -y
 pip install -r requirements.txt
 python -m pip install mediapipe
 
+# step 4: Install zip files
+apt-get update
+apt-get install zip
+cd /root/25th-conference-fakebusters/model/fakecatcher/data
+mkdir manipulated_sequences
+mkdir original_sequences
+gdown 13cGlSlgv6-85hpEim0n9LwFHapK5vr9d
+gdown 1SOfyJ_wdoFdroL--06FbQm3SDm_0Edsr
+gdown 10Cfjfo_SwuOHXK-q-2B5d_j7tIDUcLPb
+mv /manipulated_sequences_1/* /manipulated_sequences/
+rm manipulated_sequences_1.zip
+mv /manipulated_sequences_2/* /manipulated_sequences/
+rm manipulated_sequences_2.zip
+mv /actors /original_sequences/
+mv /youtube /original_sequences/
+
+
 echo "Setup completed successfully!"
