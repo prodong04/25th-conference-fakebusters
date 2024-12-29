@@ -73,7 +73,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const lipFormData = new FormData();
             lipFormData.append('file', file);
 
-            const lipResponse = await fetch('http://13.209.124.7:8000/api/models/lipforensic', {
+            const lipResponse = await fetch('https://69b3-13-209-124-7.ngrok-free.app/api/models/lipforensic', {
                 method: 'POST',
                 body: lipFormData,
             });
@@ -98,7 +98,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const mmnetFormData = new FormData();
             mmnetFormData.append('file', file);
 
-            const mmnetResponse = await fetch('http://13.209.124.7:8000/api/models/mmnet', {
+            const mmnetResponse = await fetch('https://69b3-13-209-124-7.ngrok-free.app/api/models/mmnet', {
                 method: 'POST',
                 body: mmnetFormData,
             });
@@ -123,7 +123,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const ppgFormData = new FormData();
             ppgFormData.append('file', file);
 
-            const ppgResponse = await fetch('http://13.209.124.7:8000/api/models/visual-ppg', {
+            const ppgResponse = await fetch('https://69b3-13-209-124-7.ngrok-free.app/api/models/visual-ppg', {
                 method: 'POST',
                 body: ppgFormData,
             });
@@ -145,10 +145,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
 
     const getPPGVideo = useCallback(async (videoNames: { ppg_graph: string; ppg_mask: string; ppg_transformed: string }) => {
         try {
-            const baseUrl = 'http://13.209.124.7:8000/api/models/video/';
-            const ppgGraphResponse = await fetch(`${baseUrl}${videoNames.ppg_graph}`);
-            const ppgMaskResponse = await fetch(`${baseUrl}${videoNames.ppg_mask}`);
-            const ppgTransformedResponse = await fetch(`${baseUrl}${videoNames.ppg_transformed}`);
+            const header = new Headers();
+            header.append('ngrok-skip-browser-warning', 'true');
+            const baseUrl = 'https://69b3-13-209-124-7.ngrok-free.app/api/models/video/';
+            const ppgGraphResponse = await fetch(`${baseUrl}${videoNames.ppg_graph}` , { headers: header });
+            const ppgMaskResponse = await fetch(`${baseUrl}${videoNames.ppg_mask}` , { headers: header });
+            const ppgTransformedResponse = await fetch(`${baseUrl}${videoNames.ppg_transformed}` , { headers: header });
 
             if (!ppgGraphResponse.ok || !ppgMaskResponse.ok || !ppgTransformedResponse.ok) {
                 throw new Error('Failed to fetch PPG videos');
@@ -157,6 +159,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const ppgGraphBlob = await ppgGraphResponse.blob();
             const ppgMaskBlob = await ppgMaskResponse.blob();
             const ppgTransformedBlob = await ppgTransformedResponse.blob();
+
+            console.log(`${baseUrl}${videoNames.ppg_graph}`)
+            console.log(ppgMaskBlob)
 
             const ppgGraphUrl = URL.createObjectURL(ppgGraphBlob);
             const ppgMaskUrl = URL.createObjectURL(ppgMaskBlob);
