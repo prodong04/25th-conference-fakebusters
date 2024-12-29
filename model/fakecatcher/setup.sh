@@ -3,6 +3,13 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# 전달받은 인자 확인
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <server_number>"
+    exit 1
+fi
+
+SERVER_NUMBER=$1
 # Step 1: Install Miniconda (if not already installed)
 if [ ! -d "$HOME/miniconda3" ]; then
     echo "Installing Miniconda..."
@@ -71,7 +78,7 @@ if [ -f "actors.zip" ]; then
 fi
 cd
 
-python /root/25th-conference-fakebusters/model/fakecatcher/data/fakeforensics.py -b /root/25th-conference-fakebusters/model/fakecatcher/data
+python /root/25th-conference-fakebusters/model/fakecatcher/data/fakeforensics.py -b /root/25th-conference-fakebusters/model/fakecatcher/data -s $SERVER_NUMBER
 cd
 
 export PYTHONPATH=/root/25th-conference-fakebusters/model/fakecatcher
