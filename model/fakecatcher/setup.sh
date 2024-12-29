@@ -10,6 +10,7 @@ if [ ! -d "$HOME/miniconda3" ]; then
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
     chmod +x ~/miniconda3/miniconda.sh
     bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+    echo "Initializing Conda..."
     ~/miniconda3/bin/conda init bash
 fi
 
@@ -26,24 +27,56 @@ conda activate video
 echo "Installing dependencies..."
 conda install conda-forge::libgl -y
 conda install -c conda-forge ffmpeg -y
+cd /root/25th-conference-fakebusters/model/fakecatcher
 pip install -r requirements.txt
 python -m pip install mediapipe
+cd
 
-# step 4: Install zip files
-apt-get update
-apt-get install zip
+# Step 4: Install zip files
+echo "Installing zip files..."
+sudo apt-get update
+sudo apt-get install -y zip
+
 cd /root/25th-conference-fakebusters/model/fakecatcher/data
-mkdir manipulated_sequences
-mkdir original_sequences
-gdown 13cGlSlgv6-85hpEim0n9LwFHapK5vr9d
-gdown 1SOfyJ_wdoFdroL--06FbQm3SDm_0Edsr
-gdown 10Cfjfo_SwuOHXK-q-2B5d_j7tIDUcLPb
-mv /manipulated_sequences_1/* /manipulated_sequences/
-rm manipulated_sequences_1.zip
-mv /manipulated_sequences_2/* /manipulated_sequences/
-rm manipulated_sequences_2.zip
-mv /actors /original_sequences/
-mv /youtube /original_sequences/
 
+# Create directories if they don't exist
+mkdir -p manipulated_sequences original_sequences
+
+# Define zip file details
+declare -A file_details=(
+    ["manipulated_sequences_1.zip"]="13cGlSlgv6-85hpEim0n9LwFHapK5vr9d"
+    ["manipulated_sequences_2.zip"]="1SOfyJ_wdoFdroL--06FbQm3SDm_0Edsr"
+    ["actors.zip"]="10Cfjfo_SwuOHXK-q-2B5d_j7tIDUcLPb"
+)
+
+# Check and download zip files if not already present
+for zip_file in "${!file_details[@]}"; do
+    if [ ! -f "$zip_file" ]; then
+        echo "Downloading $zip_file..."
+        gdown "${file_details[$zip_file]}" -O "$zip_file"
+    else
+        echo "$zip_file already exists. Skipping download."
+    fi
+done
+
+# Extract and move files
+if [ -f "manipulated_sequences_1.zip" ]; then
+    unzip -o manipulated_sequences_1.zip -d manipulated_sequences/
+fi
+if [ -f "manipulated_sequences_2.zip" ]; then
+    unzip -o manipulated_sequences_2.zip -d manipulated_sequences/
+fi
+if [ -f "actors.zip" ]; then
+    unzip -o actors.zip -d original_sequences/
+fi
+cd
+
+python /root/25th-conference-fakebusters/model/fakecatcher/data/fakeforensics.py -b /root/25th-conference-fakebusters/model/fakecatcher/data
+cd
+
+export PYTHONPATH=/root/25th-conference-fakebusters/model/fakecatcher
+
+cd /root/25th-conference-fakebusters/model/fakecatcher
+#python model/fakecatcher/cnn/preprocess_map.py -c model/fakecatcher/utils/config.yaml -l model/fakecatcher/data/ppg_map.log -o model/fakecatcher/data
 
 echo "Setup completed successfully!"
