@@ -17,13 +17,14 @@ from feature.feature_extractor import FeatureExtractor
 
 # Set up logging
 global logger
-logger = setup_logging()
+logger = setup_logging(log_file='test_csv.log')
 
 def extract_feature(video_path, config):
     """Process a single video to extract features."""
     try: 
         landmarker = ROIProcessor(video_path, config)
     except DetectionError:
+        logger.warning(f"Skipping video {video_path} because DetectionError.")
         return None, None
     # annotated_frames, fps = landmarker.detect_with_draw()
     # output_video_path = "output_video.mp4"
@@ -33,7 +34,7 @@ def extract_feature(video_path, config):
         logger.warning(f"Skipping video {video_path} because R_means_array is empty.")
         return None, None
 
-    features = []
+    ppgs = []
     time_interval = config['seg_time_interval']
     target_fps = config['fps_standard']
 
@@ -57,12 +58,8 @@ def extract_feature(video_path, config):
             L_ROI_G_segments, M_ROI_G_segments, R_ROI_G_segments,
             L_ROI_C_segments, M_ROI_C_segments, R_ROI_C_segments
         ]
-
-        # Extract features
-        fe = FeatureExtractor(target_fps, *ppg)
-        features.append(fe.feature_union())
-
-    return np.array(features)
+        ppgs.append(ppg)
+    return ppgs
 
 
 def main():
@@ -71,31 +68,34 @@ def main():
     # parser.add_argument('-c', '--config_path', type=str, required=True, help="Path to the config file.")
     # args = parser.parse_args()
     
-    config_path = "D:/2024/4-1/fakebusters/github/25th-conference-fakebusters/model/fakecatcher/utils/config.yaml"
+    config_path = "/root/25th-conference-fakebusters/model/fakecatcher/utils/config.yaml"
     # Load configuration
     with open(config_path, 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
 
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     feature_save_path = f"features_{current_time}.pkl"
-    
+    csv_path = '/root/25th-conference-fakebusters/model/fakecatcher/data/test_video_list.csv'
     # Load data
-    video_paths, true_labels = load_fakeforensics_data(config["meta_data_csv_path"])
+    video_paths, true_labels = load_fakeforensics_data(csv_path)
     logger.info(f"Loaded {len(video_paths)} videos.")
 
     # Extract features
-    video_features, video_labels = [], []
+    ppgss, video_labels = [], []
     for video_path, true_label in tqdm(zip(video_paths, true_labels), desc='Processing videos'):
 
-        features = extract_feature(video_path, config)
-        if features is not None:
-            video_features.append(features)
+        ppgs = extract_feature(video_path, config)
+        if not isinstance(ppgs, tuple):
+            logger.info(f"Load {video_path} videos.")
+
+            ppgss.append(ppgs)
             video_labels.append(true_label)
-            # feature 저장장
-        joblib.dump({'features': video_features, 'labels': video_labels}, feature_save_path)
-    
+            # feature 저장
+            joblib.dump({'ppg': ppgss, 'labels': video_labels}, feature_save_path)  
+        else:
+            logger.warning(f"skip this video: {video_path} ")
     # feature 저장
-    joblib.dump({'features': video_features, 'labels': video_labels}, feature_save_path)
+    joblib.dump({'features': ppgs, 'labels': video_labels}, feature_save_path)
     logger.info(f"Extracted features saved to {feature_save_path}.")
 
 if __name__ == "__main__":
