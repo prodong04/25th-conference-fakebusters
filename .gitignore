@@ -182,8 +182,3 @@ frontend/dbust/public/data
 
 **/*.yaml
 
-**/*.csv
-
-**/*.mp4
-
-**/*.json
