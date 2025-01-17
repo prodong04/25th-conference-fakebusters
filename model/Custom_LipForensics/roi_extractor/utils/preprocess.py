@@ -2,7 +2,12 @@ import os
 import cv2
 import dlib
 import yaml
+
+import numpy
+numpy.float = numpy.float64
+numpy.int = numpy.int_
 import skvideo
+
 import argparse
 import skvideo.io
 import subprocess

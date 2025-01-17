@@ -9,9 +9,9 @@ from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
 import sys
-sys.path.insert(0, "/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics")
+sys.path.insert(0, "./LipForensics")
 from inference import evaluate_lipforensics
-sys.path.insert(0, "/root/roi_extractor/utils")
+sys.path.insert(0, "/root/roi_extractor/utils") #여기 수정
 from preprocess import VideoROIExtractor
 
 
@@ -49,6 +49,7 @@ def main():
     args = parser.parse_args()
 
     # Config 파일 읽기
+    # 여기 수정
     with open('/root/roi_extractor/config.yaml', 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
 

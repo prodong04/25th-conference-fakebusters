@@ -4,10 +4,10 @@ import numpy as np
 import ffmpeg
 
 import sys
-sys.path.insert(0, "/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics")
+sys.path.insert(0, "./LipForensics")
 from inference import evaluate_lipforensics
 
-sys.path.insert(0, "/root/25th-conference-fakebusters/model/Custom_LipForensics/utils")
+sys.path.insert(0, "./utils")
 from mouth_roi import ROIProcessor
 import cv2
 import os
@@ -18,7 +18,7 @@ def main():
     parser.add_argument("--video_path", type=str, required=True, help="Path to the input video file.")
     args = parser.parse_args()
 
-    config_path = '/root/25th-conference-fakebusters/model/Custom_LipForensics/utils/config.yaml'
+    config_path = './utils/config.yaml'
 
     # Config 파일 읽기
     with open(config_path, 'r') as file:

@@ -13,7 +13,7 @@ import numpy as np
 app = FastAPI()
 
 # 비디오 저장 디렉토리 설정
-VIDEO_UPLOAD_DIR = "/root/25th-conference-fakebusters/model/Custom_LipForensics/uploaded_videos"
+VIDEO_UPLOAD_DIR = "./uploaded_videos"
 os.makedirs(VIDEO_UPLOAD_DIR, exist_ok=True)  # 디렉토리가 없으면 생성
 
 @app.get("/")
@@ -39,7 +39,7 @@ async def upload_video(file: UploadFile = File(...)):
     
     # final_inference.py 실행
     process = subprocess.run(
-        ["python", "/root/25th-conference-fakebusters/model/Custom_LipForensics/final_inference_dlib.py", 
+        ["python", "./final_inference_dlib.py", 
          "--video_path", video_path],
         capture_output=True,
         text=True
