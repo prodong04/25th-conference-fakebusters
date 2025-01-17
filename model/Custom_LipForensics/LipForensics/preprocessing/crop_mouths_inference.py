@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import deque
 
 import sys
-sys.path.append('/root/LipForensics')
+#sys.path.append('./LipForensics')
 from preprocessing.utils import warp_img, apply_transform, cut_patch  # 필요한 유틸리티 함수 import
 
 STD_SIZE = (256, 256)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     # 기본 실행
     frames_dir = "./example_frames"
     landmarks_dir = "./example_FAN"
-    mean_face_path = "/root/LipForensics/preprocessing/20words_mean_face.npy"
+    mean_face_path = "./preprocessing/20words_mean_face.npy"
 
     processor = CropMouthProcessor(mean_face_path)
     cropped_mouths_dir = processor.process(frames_dir, landmarks_dir)

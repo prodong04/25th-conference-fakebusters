@@ -13,19 +13,19 @@ from torchvision.transforms import Compose, CenterCrop, Resize, Lambda
 from tqdm import tqdm
 
 import sys
-sys.path.insert(0, "/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics/data")
+sys.path.insert(0, "./data")
 from transforms import NormalizeVideo, ToTensorVideo
 from dataset_clips import SingleVideoClips
 from samplers import ConsecutiveClipSampler
-sys.path.insert(0, "/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics/models")
+sys.path.insert(0, "./models")
 from spatiotemporal_net import get_model
-sys.path.insert(0, '/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics')
+#sys.path.insert(0, '/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics')
 from lipforensics_utils import get_files_from_split
 
 
 def evaluate_lipforensics(
     cropped_mouths_array,
-    weights_forgery_path="/root/25th-conference-fakebusters/model/Custom_LipForensics/LipForensics/models/weights/lipforensics_ff.pth",
+    weights_forgery_path="./models/weights/lipforensics_ff.pth",
     frames_per_clip=25,
     batch_size=8,
     device="cuda:0",
@@ -85,5 +85,5 @@ def evaluate_lipforensics(
     return prediction
 
 if __name__ == "__main__":
-    prediction = evaluate_lipforensics(video_path='/root/chimchak.mp4')
+    prediction = evaluate_lipforensics(video_path='../chimchak.mp4')
     print(f"Final Prediction: {prediction:.4f} (0: Real, 1: Fake)")

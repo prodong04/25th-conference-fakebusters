@@ -64,7 +64,7 @@ def parse_args():
         choices=["c0", "c23", "c40"],
         default="c23",
     )
-    parser.add_argument("--mean-face", default="/root/LipForensics/preprocessing/20words_mean_face.npy", help="Mean face pathname")
+    parser.add_argument("--mean-face", default="./preprocessing/20words_mean_face.npy", help="Mean face pathname")
     parser.add_argument("--crop-width", default=96, type=int, help="Width of mouth ROIs")
     parser.add_argument("--crop-height", default=96, type=int, help="Height of mouth ROIs")
     parser.add_argument("--start-idx", default=48, type=int, help="Start of landmark index for mouth")
