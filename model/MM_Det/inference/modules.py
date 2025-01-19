@@ -80,7 +80,7 @@ def inference_frame_maker(mother_dir, video_dir):
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     logging.info(device)
     model = VectorQuantizedVAE(3, 256, 512)
-    state_dict = torch.load('/root/frame_diffusion_detection/MM_Det/weights/vqvae/model.pt', map_location=device)
+    state_dict = torch.load('./weights/vqvae/model.pt', map_location=device)
     model.load_state_dict(state_dict, strict=True)
     model.to(device)
 
