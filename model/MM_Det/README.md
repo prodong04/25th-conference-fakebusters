@@ -5,25 +5,21 @@ The test code has been revised to support inference, and additional inference fu
 
 ## How to Use
 
-### 1. Inference
-To perform inference, navigate to the `inference` directory and run the following command:
+### 1. Download the weight from
+```bash
+https://drive.google.com/drive/folders/1RRNS8F7ETZWrcBu8fvB3pM9qHbmSEEzy
+```
+<img width="409" alt="스크린샷 2025-01-19 오후 2 52 55" src="https://github.com/user-attachments/assets/cdf97cf0-e007-4866-aebc-aa4f7e52bdea" />
+
+### 2. Inference
+To perform inference, following the command. 
 
 ```bash
-cd ./25th-conference-fakebusters/model/MM_Det/
-pip install -r requirements.txt
-cd ./25th-conference-fakebusters/model/MM_Det/LLaVa/
-pip install -e .
-
-
-
-cd ./25th-conference-fakebusters/model/MM_Det/inference
-python main.py
+python main.py -v video_path
 ```
 
-### 2. Check Server
+if inference went succesfully, you can see
+<img width="240" alt="스크린샷 2025-01-19 오후 2 52 03" src="https://github.com/user-attachments/assets/3281e75f-77bf-43f7-aebc-5ed1eb03ab9e" />
 
-```bash
-curl -X POST "[your_address]/process_video/" \
-     -H "Content-Type: multipart/form-data" \
-     -F "[mp4 folder directory]"
-```
+
+
