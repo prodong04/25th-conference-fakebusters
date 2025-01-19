@@ -206,6 +206,10 @@ class Trainer:
         # for name, metric in self.metrics.items():
         #     value = metric(gts, probas)
         #     video_inference['metrics'][name] = value
+        if float(loss) > 40:
+            return False
+        else:
+            return True
 
         return float(loss)
         

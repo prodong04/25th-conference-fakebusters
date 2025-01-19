@@ -1,17 +1,19 @@
-from modules import inference_frame_maker, LMM_inference
-import sys
-import torch
-import os
-from copy import deepcopy
-from tqdm import tqdm
-import torch.nn as nn
 
+import os
+import sys
+from .modules import inference_frame_maker, LMM_inference
 
 # MM_Det 디렉토리를 sys.path에 추가
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, '..'))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
+import sys
+import torch
+import os
+from copy import deepcopy
+from tqdm import tqdm
+import torch.nn as nn
 
 from options.test_options import TestOption
 from utils.trainer import Trainer
@@ -76,17 +78,18 @@ from builder import get_model
 def inference(_video_dir, _mother_dir, _image_dir, _mm_representation_path, _reconstruction_path, _config):
     prefix = _video_dir.split('/')[-1].split('.')[0]
     _image_dir = f'{_reconstruction_path}/{prefix}'
-    inference_frame_maker(
-        mother_dir=_mother_dir,
-        video_dir=_video_dir,
-    )
-    LMM_inference(
-        image_dir = _image_dir,
-        config = _config)
-    args = TestOption().parse()
+    # inference_frame_maker(
+    #     mother_dir=_mother_dir,
+    #     video_dir=_video_dir,
+    # )
+    # LMM_inference(
+    #     image_dir = _image_dir,
+    #     config = _config)
+
+
+    # args = TestOption().parse()
     
     config = _config
-
     logger = get_logger(__name__, config)
     inf_dataset_config = {'inference': {'data_root': f'{config["data_root"]}', 
                                         'dataset_type': 'VideoFolderDatasetForReconsWithFn', 'mode': 'test', 
@@ -118,6 +121,10 @@ def inference(_video_dir, _mother_dir, _image_dir, _mm_representation_path, _rec
     new_state_dict = {}
     for k, v in state_dict.items():
         new_state_dict[k.replace('module.', '')] = v
+
+    video_name = _video_dir.split('/')[-1].split('.')[0]
+    mm_path = f'inference/mm_representation/{video_name}/0_real/original/mm_representation.pth'
+    config['mm_root'] = mm_path
     state_dict = new_state_dict
     model.load_state_dict(state_dict, strict=config['cache_mm'])
     
