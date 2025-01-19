@@ -39,8 +39,9 @@ async def upload_video(file: UploadFile = File(...)):
     
     # final_inference.py 실행
     process = subprocess.run(
-        ["python", "./final_inference_dlib.py", 
-         "--video_path", video_path],
+        ["python", "./run_dlib.py", 
+         "--video_path", video_path,
+         "--save_video"],
         capture_output=True,
         text=True
     )
