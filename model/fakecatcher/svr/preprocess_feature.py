@@ -33,7 +33,8 @@ def extract_feature(video_path, config):
     if R_means_array.shape[0] == 0:
         logger.warning(f"Skipping video {video_path} because R_means_array is empty.")
         return None, None
-
+    
+    features = []
     ppgs = []
     time_interval = config['seg_time_interval']
     target_fps = config['fps_standard']
@@ -59,7 +60,12 @@ def extract_feature(video_path, config):
             L_ROI_C_segments, M_ROI_C_segments, R_ROI_C_segments
         ]
         ppgs.append(ppg)
-    return ppgs
+
+        # Extract features
+        fe = FeatureExtractor(target_fps, *ppg)
+        features.append(fe.feature_union())
+
+    return np.array(features)
 
 
 def main():

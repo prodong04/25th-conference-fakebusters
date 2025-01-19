@@ -94,7 +94,7 @@ def main():
     best1 = s1.compare_models()
 
     # 모델 저장
-    save_model(best1, 'best_model')
+    save_model(best1, '../misc/svm_model')
 
 
 if __name__ == '__main__':
