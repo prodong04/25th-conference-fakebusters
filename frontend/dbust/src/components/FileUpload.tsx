@@ -2,6 +2,9 @@ import React, { useState, useCallback } from 'react';
 import styles from './FileUpload.module.css';
 import { ProgressCircleRing, ProgressCircleRoot } from "@/components/ui/progress-circle";
 import { HStack } from "@chakra-ui/react";
+import { getConfig } from '@/config';
+
+const config = getConfig();
 
 interface FileUploadProps {
     onFileUpload: (file: File) => void;
@@ -73,7 +76,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const lipFormData = new FormData();
             lipFormData.append('file', file);
 
-            const lipResponse = await fetch('https://69b3-13-209-124-7.ngrok-free.app/api/models/lipforensic', {
+            const lipResponse = await fetch(`${config.apiBaseUrl}/api/models/lipforensic`, {
                 method: 'POST',
                 body: lipFormData,
             });
@@ -98,7 +101,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const mmnetFormData = new FormData();
             mmnetFormData.append('file', file);
 
-            const mmnetResponse = await fetch('https://69b3-13-209-124-7.ngrok-free.app/api/models/mmnet', {
+            const mmnetResponse = await fetch(`${config.apiBaseUrl}/api/models/mmnet`, {
                 method: 'POST',
                 body: mmnetFormData,
             });
@@ -123,7 +126,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, lipSetScore, lipS
             const ppgFormData = new FormData();
             ppgFormData.append('file', file);
 
-            const ppgResponse = await fetch('https://69b3-13-209-124-7.ngrok-free.app/api/models/visual-ppg', {
+            const ppgResponse = await fetch(`${config.apiBaseUrl}/api/models/visual-ppg`, {
                 method: 'POST',
                 body: ppgFormData,
             });
