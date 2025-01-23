@@ -36,13 +36,12 @@
 1. **Lip-Reading**  
     영상의 입모양을 분석하여 딥페이크 여부를 확인합니다.   
 
-
 <div style="text-align: center;">
-  <video loop autoplay src="../static/lips.MP4" title="Title"></video>
+    <img src="../static/LIPS.gif" alt="lips">
 </div>
 
 
-2. **Augmentation**  
+1. **Augmentation**  
     영상을 변형하여 딥페이크 여부를 확인합니다.
 
 <table>
@@ -51,7 +50,7 @@
     <th>Augmented</th>
   </tr>
   <tr>
-    <td><video loop autoplay src="../static/original-kju.MP4" title="---"></video></td>
+    <td><img src="../static/original-kju.gif" alt="lips"></td>
     <td><img src="../static/aug-kju.PNG" alt="aug"></td>
   </tr>
 </table>
@@ -63,7 +62,7 @@
 
 <table>
   <tr>
-    <td><video loop autoplay src="../static/ppg.MP4" title="Title"></video></td>
+    <td><img src="../static/ppg.gif" alt="lips"></td>
     <td><img src="../static/ppg.PNG" alt="alt text"></td>
   </tr>
 </table>
