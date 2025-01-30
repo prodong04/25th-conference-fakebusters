@@ -27,3 +27,5 @@ python model/fakecatcher/cnn/train_cnn.py -c model/fakecatcher/utils/config.yaml
 cd /25th-conference-fakebusters/model/fakecatcher/cnn
 python main.py -c model/fakecatcher/utils/config.yaml
 ```
+
+Now your model is running on the uvicorn!
