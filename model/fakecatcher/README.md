@@ -29,3 +29,39 @@ python main.py -c model/fakecatcher/utils/config.yaml
 ```
 
 Now your model is running on the uvicorn!
+
+
+## How to Use (SVR based Model)
+
+### 1. Train step
+
+#### 1-1. Download dataset
+
+https://github.com/ondyari/FaceForensics
+
+#### 1-2. Generate a CSV file that includes the data's location and labels.
+
+```bash
+cd /root/25th-conference-fakebusters/model/fakecatcher/data
+python fakeforensics.py -b path/to/dataset
+```
+Then `train_video_list.csv` and `test_video_list.csv` files are generated. 
+
+#### 1-3. Extract PPG and Features
+```bash
+cd /25th-conference-fakebusters/model
+python fakecatcher/svr/feature.py -c fakecatcher/utils/config.yaml -d fakecatcher/data/train_video_list.csv
+```
+
+#### 1-4. Train svr model
+```bash
+cd /25th-conference-fakebusters/model
+python model/fakecatcher/svr/train.py -f model/fakecatcher/misc/feature.pkl
+```
+### 2. Inference step
+```bash
+cd /25th-conference-fakebusters/model/fakecatcher/svr
+python main.py -c model/fakecatcher/utils/config.yaml
+```
+
+Now your model is running on the uvicorn!

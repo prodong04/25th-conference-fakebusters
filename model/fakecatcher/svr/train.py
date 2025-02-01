@@ -37,7 +37,11 @@ def perform_pca(data, n_components=None):
     return pca_df, explained_variance, pca
 
 def main():
-    data = joblib.load('features_20241228_164626.pkl')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--feature_file', type=str, required=True, help="Path to the feature file.")
+    args = parser.parse_args()
+
+    data = joblib.load(args.feature_file)
 
     # Set up logging
     global logger
@@ -71,7 +75,6 @@ def main():
             valid_labels.append(label)
 
     logger.warning(f"{nan/len(video_features)*100} is passed.")
-    logger.warning(f"pass된 영상 중 약 {sum(nan_labels)/len(nan_labels)*100}이 label 1이다")
     
     # Combine all features and labels
     all_features = np.vstack(valid_features)
@@ -94,7 +97,7 @@ def main():
     best1 = s1.compare_models()
 
     # 모델 저장
-    save_model(best1, '../misc/svm_model')
+    save_model(best1, '../misc/best_model')
 
 
 if __name__ == '__main__':

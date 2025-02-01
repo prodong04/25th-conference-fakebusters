@@ -17,7 +17,7 @@ from feature.feature_extractor import FeatureExtractor
 
 # Set up logging
 global logger
-logger = setup_logging(log_file='test_csv.log')
+logger = setup_logging(log_file='feature.log')
 
 def extract_feature(video_path, config):
     """Process a single video to extract features."""
@@ -70,18 +70,19 @@ def extract_feature(video_path, config):
 
 def main():
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-c', '--config_path', type=str, required=True, help="Path to the config file.")
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--config_path', type=str, required=True, help="Path to the config file.")
+    parser.add_argument('-d', '--data_path', type=str, required=True, help="Path to the dataset csv file.")
+
+    args = parser.parse_args()
     
-    config_path = "/root/25th-conference-fakebusters/model/fakecatcher/utils/config.yaml"
+    config_path = args.config_path
     # Load configuration
     with open(config_path, 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
 
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    feature_save_path = f"features_{current_time}.pkl"
-    csv_path = '/root/25th-conference-fakebusters/model/fakecatcher/data/test_video_list.csv'
+    feature_save_path = f"../misc/features.pkl"
+    csv_path = args.data_path
     # Load data
     video_paths, true_labels = load_fakeforensics_data(csv_path)
     logger.info(f"Loaded {len(video_paths)} videos.")
