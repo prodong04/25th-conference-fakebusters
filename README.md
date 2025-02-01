@@ -44,7 +44,7 @@
 |--------------|----------------------------------|---------------------------------|-------------------------------------|
 | FakeCatcher  | PPG(Photoplethysmography) 신호   | Dlib, MediaPipe, CNN, Random Forest | 생체 신호 기반 탐지, 얼굴 영역 중심 분석 |
 | LipForensics | 입술 움직임 패턴 탐지             | ResNet-18, MSTCN                | 시공간적 움직임 분석, 다양한 위조 방식에 강건 |
-| MMDet        | 이미지 주파수 도메인 분석         | CLIP Encoder, DIRE, VQ-VAE      | GAN 및 Diffusion 이미지 생성 방식 탐지 |
+| MMDet        | 이미지 주파수 도메인 분석         | CLIP Encoder, DIRE, VQ-VAE, LLaVa      | GAN 및 Diffusion 이미지 생성 방식 탐지 |
 
 ### 모델별 주요 기능 및 역할
 
