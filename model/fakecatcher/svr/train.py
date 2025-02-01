@@ -1,6 +1,8 @@
+import argparse
 import joblib
 import numpy as np
 import pandas as pd
+import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
@@ -97,7 +99,7 @@ def main():
     best1 = s1.compare_models()
 
     # 모델 저장
-    save_model(best1, '../misc/best_model')
+    save_model(best1, './fakecatcher/misc/best_model')
 
 
 if __name__ == '__main__':

@@ -5,12 +5,12 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 from pycaret.classification import load_model, predict_model
-from feature import extract_feature
+from preprocess_feature import extract_feature
 
 
 def inference(video_path: str, config_path: str):
     # Load saved model and PCA
-    model = load_model('../misc/best_model')
+    model = load_model('./fakecatcher/misc/best_model')
 
     # Load configuration
     with open(config_path, 'r', encoding='utf-8') as file:

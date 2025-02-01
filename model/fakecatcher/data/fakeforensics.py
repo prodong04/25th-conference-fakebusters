@@ -94,7 +94,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # 작업 디렉토리와 저장할 CSV 파일 경로
-    base_directory = args.base_dirc  # 탐색할 루트 디렉토리
+    base_directory = args.base_dir  # 탐색할 루트 디렉토리
     output_csv = "video_list.csv"  # 전체 데이터 저장할 CSV 파일 이름
 
     train_csv = "train_video_list.csv"  # 훈련 데이터 저장 파일
